@@ -49,6 +49,19 @@ function statusMark(status: SquadStatus) {
   return '★';
 }
 
+function sanitizePlayersForFirestore(players: SquadPlayerPrediction[]): SquadPlayerPrediction[] {
+  return players.map((p) => {
+    const out: SquadPlayerPrediction = {
+      id: p.id,
+      name: p.name,
+      position: p.position,
+      status: p.status,
+    };
+    if (typeof p.note === 'string' && p.note.trim()) out.note = p.note;
+    return out;
+  });
+}
+
 export default function Wc2026CountryPage() {
   const params = useParams<{ country: string }>();
   const countrySlug = params?.country ?? '';
@@ -62,6 +75,23 @@ export default function Wc2026CountryPage() {
   const [sharing, setSharing] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
 
+  const [predictionComment, setPredictionComment] = useState('');
+
+  const [openSquadSectionByKey, setOpenSquadSectionByKey] = useState<Record<string, boolean>>({
+    GK: true,
+    DF: true,
+    MF: true,
+    FW: true,
+    MFFW: true,
+  });
+
+  const [openCandidateSectionByPos, setOpenCandidateSectionByPos] = useState<Record<SquadPosition, boolean>>({
+    GK: true,
+    DF: true,
+    MF: true,
+    FW: true,
+  });
+
   const [candidateStatusById, setCandidateStatusById] = useState<Record<string, PickStatus>>({});
 
   const canEdit = Boolean(user);
@@ -70,6 +100,12 @@ export default function Wc2026CountryPage() {
     if (!country) return [];
     return WC2026_CANDIDATES_BY_COUNTRY[country.code] ?? [];
   }, [country]);
+
+  const candidatesByPos = useMemo(() => {
+    const out: Record<SquadPosition, typeof candidates> = { GK: [], DF: [], MF: [], FW: [] };
+    for (const c of candidates) out[c.position].push(c);
+    return out;
+  }, [candidates]);
 
   const docRef = useMemo(() => {
     if (!user || !countrySlug) return null;
@@ -82,12 +118,14 @@ export default function Wc2026CountryPage() {
       setStatusMessage(null);
       if (!user || !docRef) {
         setPlayers([]);
+        setPredictionComment('');
         return;
       }
       try {
         const snap = await getDoc(docRef);
         if (!snap.exists()) {
           if (!cancelled) setPlayers([]);
+          if (!cancelled) setPredictionComment('');
           return;
         }
         const data = snap.data() as SquadPredictionDoc;
@@ -102,6 +140,7 @@ export default function Wc2026CountryPage() {
             note: typeof p.note === 'string' ? p.note : undefined,
           }));
         if (!cancelled) setPlayers(loaded);
+        if (!cancelled) setPredictionComment(typeof data?.comment === 'string' ? data.comment : '');
       } catch {
         if (!cancelled) setStatusMessage('読み込みに失敗しました');
       }
@@ -147,17 +186,22 @@ export default function Wc2026CountryPage() {
     setSaving(true);
     setStatusMessage(null);
     try {
+      const trimmedComment = predictionComment.trim().slice(0, 500);
+      const sanitizedPlayers = sanitizePlayersForFirestore(players);
       const payload: SquadPredictionDoc = {
         schemaVersion: 1,
         countrySlug,
         tournamentId: 'wc2026',
-        players,
+        players: sanitizedPlayers,
         updatedAt: serverTimestamp(),
       };
+      if (trimmedComment) payload.comment = trimmedComment;
       await setDoc(docRef, payload, { merge: true });
       setStatusMessage('保存しました');
-    } catch {
-      setStatusMessage('保存に失敗しました');
+    } catch (e: any) {
+      const code = typeof e?.code === 'string' ? e.code : '';
+      const msg = typeof e?.message === 'string' ? e.message : '';
+      setStatusMessage(`保存に失敗しました${code || msg ? `：${code || msg}` : ''}`);
     } finally {
       setSaving(false);
     }
@@ -175,7 +219,9 @@ export default function Wc2026CountryPage() {
     try {
       const shareId = randomId();
       const shareRef = doc(db, 'wc2026PredictionShares', shareId);
-      const snapshotJson = JSON.stringify({ countrySlug, players });
+      const trimmedComment = predictionComment.trim().slice(0, 500);
+      const sanitizedPlayers = sanitizePlayersForFirestore(players);
+      const snapshotJson = JSON.stringify({ countrySlug, players: sanitizedPlayers, comment: trimmedComment || undefined });
       await setDoc(
         shareRef,
         {
@@ -347,46 +393,77 @@ export default function Wc2026CountryPage() {
             <div className="mt-4 space-y-5">
               {squadRows.map((row) => (
                 <div key={row.key}>
-                  <div className="text-center text-xs font-bold tracking-[0.3em] text-yellow-200/90">{row.title}</div>
-                  <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-3">
-                    {row.players.length === 0 ? (
-                      <div className="col-span-3 text-center text-xs text-white/50">未選出</div>
-                    ) : (
-                      row.players.map((p) => (
-                        <div key={p.id} className="min-w-0 text-center">
-                          {(() => {
-                            const cand = candidates.find((c) => c.id === p.id);
-                            const apps = cand?.stats?.appearances;
-                            const goals = cand?.stats?.goals;
-                            const statLine =
-                              typeof apps === 'number' || typeof goals === 'number'
-                                ? `${typeof apps === 'number' ? `${apps} cap` : ''}${
-                                    typeof apps === 'number' && typeof goals === 'number' ? ' / ' : ''
-                                  }${typeof goals === 'number' ? `${goals}G` : ''}`
-                                : '';
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenSquadSectionByKey((prev) => ({ ...prev, [row.key]: !(prev[row.key] ?? true) }));
+                    }}
+                    aria-expanded={openSquadSectionByKey[row.key] ?? true}
+                    className="w-full text-center py-2 -my-2"
+                  >
+                    <div className="text-xs font-bold tracking-[0.3em] text-yellow-200/90">
+                      {row.title}
+                      <span className="ml-2 text-[10px] tracking-normal text-white/70">({row.players.length})</span>
+                      <span className="ml-2 text-[10px] tracking-normal text-white/60">
+                        {openSquadSectionByKey[row.key] ?? true ? '閉じる' : '開く'}
+                      </span>
+                    </div>
+                  </button>
 
-                            return (
-                              <>
-                                <div className="text-sm font-extrabold text-white truncate">
-                                  {p.name}
-                                  {typeof cand?.age === 'number' ? (
-                                    <span className="ml-1 text-[11px] font-semibold text-white/75">({cand.age})</span>
+                  {openSquadSectionByKey[row.key] ?? true ? (
+                    <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-3">
+                      {row.players.length === 0 ? (
+                        <div className="col-span-3 text-center text-xs text-white/50">未選出</div>
+                      ) : (
+                        row.players.map((p) => (
+                          <div key={p.id} className="min-w-0 text-center">
+                            {(() => {
+                              const cand = candidates.find((c) => c.id === p.id);
+                              const apps = cand?.stats?.appearances;
+                              const goals = cand?.stats?.goals;
+                              const statLine =
+                                typeof apps === 'number' || typeof goals === 'number'
+                                  ? `${typeof apps === 'number' ? `${apps} cap` : ''}${
+                                      typeof apps === 'number' && typeof goals === 'number' ? ' / ' : ''
+                                    }${typeof goals === 'number' ? `${goals}G` : ''}`
+                                  : '';
+
+                              return (
+                                <>
+                                  <div className="text-sm font-extrabold text-white truncate">
+                                    {p.name}
+                                    {typeof cand?.age === 'number' ? (
+                                      <span className="ml-1 text-[11px] font-semibold text-white/75">({cand.age})</span>
+                                    ) : null}
+                                    <span className="ml-1 text-[10px] text-white/60">{statusMark(p.status)}</span>
+                                  </div>
+                                  <div className="mt-0.5 text-[10px] text-white/60 truncate">{cand?.club ?? ''}</div>
+                                  {statLine ? (
+                                    <div className="mt-0.5 text-[10px] text-white/55 truncate">{statLine}</div>
                                   ) : null}
-                                  <span className="ml-1 text-[10px] text-white/60">{statusMark(p.status)}</span>
-                                </div>
-                                <div className="mt-0.5 text-[10px] text-white/60 truncate">{cand?.club ?? ''}</div>
-                                {statLine ? (
-                                  <div className="mt-0.5 text-[10px] text-white/55 truncate">{statLine}</div>
-                                ) : null}
-                              </>
-                            );
-                          })()}
-                        </div>
-                      ))
-                    )}
-                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               ))}
+            </div>
+
+            <div className="mt-5">
+              <div className="text-xs text-white/70">コメント（最大500文字）</div>
+              <textarea
+                value={predictionComment}
+                maxLength={500}
+                disabled={!canEdit}
+                onChange={(e) => setPredictionComment(e.target.value)}
+                className="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/90 outline-none disabled:opacity-50"
+                rows={4}
+              />
+              <div className="mt-1 text-[11px] text-white/60 text-right">{predictionComment.length}/500</div>
             </div>
           </div>
         </div>
@@ -400,53 +477,81 @@ export default function Wc2026CountryPage() {
               {candidates.length === 0 ? (
                 <div className="text-xs text-white/60">候補が未設定です</div>
               ) : (
-                candidates.map((c) => {
-                  const picked = players.find((p) => p.id === c.id) ?? null;
-                  const rowStatus: PickStatus = picked?.status ?? candidateStatusById[c.id] ?? 'none';
-                  const statsText = c.stats
-                    ? [
-                        typeof c.stats.appearances === 'number' ? `出場${c.stats.appearances}` : null,
-                        typeof c.stats.goals === 'number' ? `G${c.stats.goals}` : null,
-                        typeof c.stats.assists === 'number' ? `A${c.stats.assists}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' / ')
-                    : '';
-
-                  return (
-                    <div
-                      key={c.id}
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 flex items-center justify-between gap-3"
+                (['GK', 'DF', 'MF', 'FW'] as const).map((pos) => (
+                  <div key={pos}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenCandidateSectionByPos((prev) => ({ ...prev, [pos]: !prev[pos] }))}
+                      aria-expanded={openCandidateSectionByPos[pos]}
+                      className="w-full text-left py-2"
                     >
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-gray-100 truncate">{c.name}</div>
-                        <div className="mt-0.5 text-[11px] text-white/60 truncate">
-                          {c.position}
-                          {c.club ? ` / ${c.club}` : ''}
-                          {statsText ? ` / ${statsText}` : ''}
-                        </div>
+                      <div className="text-xs font-bold tracking-[0.3em] text-yellow-200/90">
+                        -{pos}-
+                        <span className="ml-2 text-[10px] tracking-normal text-white/70">({candidatesByPos[pos].length})</span>
+                        <span className="ml-2 text-[10px] tracking-normal text-white/60">
+                          {openCandidateSectionByPos[pos] ? '閉じる' : '開く'}
+                        </span>
                       </div>
+                    </button>
 
-                      <select
-                        value={rowStatus}
-                        disabled={!canEdit}
-                        onChange={(e) => {
-                          const next = e.target.value as PickStatus;
-                          setCandidateStatusById((prev) => ({ ...prev, [c.id]: next }));
-                          upsertOrRemoveCandidate(c, next);
-                        }}
-                        className="shrink-0 rounded-xl border border-white/10 bg-[#0b1533] px-3 py-2 text-xs text-white outline-none disabled:opacity-50"
-                        style={{ colorScheme: 'dark' }}
-                      >
-                        <option value="none">未選出</option>
-                        <option value="S">当確◎</option>
-                        <option value="A">有力○</option>
-                        <option value="B">当落△</option>
-                        <option value="!?">サプライズ★</option>
-                      </select>
-                    </div>
-                  );
-                })
+                    {openCandidateSectionByPos[pos] ? (
+                      <div className="space-y-2">
+                        {candidatesByPos[pos].map((c) => {
+                          const picked = players.find((p) => p.id === c.id) ?? null;
+                          const rowStatus: PickStatus = picked?.status ?? candidateStatusById[c.id] ?? 'none';
+                          const statsText = c.stats
+                            ? [
+                                typeof c.stats.appearances === 'number' ? `出場${c.stats.appearances}` : null,
+                                typeof c.stats.goals === 'number' ? `G${c.stats.goals}` : null,
+                                typeof c.stats.assists === 'number' ? `A${c.stats.assists}` : null,
+                              ]
+                                .filter(Boolean)
+                                .join(' / ')
+                            : '';
+
+                          return (
+                            <div
+                              key={c.id}
+                              className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 flex items-center justify-between gap-3"
+                            >
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold text-gray-100 truncate">
+                                  {c.name}
+                                  {typeof c.age === 'number' ? (
+                                    <span className="ml-1 text-[11px] font-semibold text-white/75">({c.age})</span>
+                                  ) : null}
+                                </div>
+                                <div className="mt-0.5 text-[11px] text-white/60 truncate">
+                                  {c.position}
+                                  {c.club ? ` / ${c.club}` : ''}
+                                  {statsText ? ` / ${statsText}` : ''}
+                                </div>
+                              </div>
+
+                              <select
+                                value={rowStatus}
+                                disabled={!canEdit}
+                                onChange={(e) => {
+                                  const next = e.target.value as PickStatus;
+                                  setCandidateStatusById((prev) => ({ ...prev, [c.id]: next }));
+                                  upsertOrRemoveCandidate(c, next);
+                                }}
+                                className="shrink-0 w-[80px] rounded-xl border border-white/10 bg-[#0b1533] px-1.5 py-2 text-[10px] text-white outline-none disabled:opacity-50"
+                                style={{ colorScheme: 'dark' }}
+                              >
+                                <option value="none">未選出</option>
+                                <option value="S">当確◎</option>
+                                <option value="A">有力○</option>
+                                <option value="B">当落△</option>
+                                <option value="!?">サプライズ★</option>
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                ))
               )}
             </div>
           </div>

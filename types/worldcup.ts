@@ -17,5 +17,6 @@ export type SquadPredictionDoc = {
   countrySlug: string;
   tournamentId: 'wc2026';
   players: SquadPlayerPrediction[];
+  comment?: string;
   updatedAt?: any;
 };

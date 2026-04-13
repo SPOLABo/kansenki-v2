@@ -326,6 +326,17 @@ export const WC2026_CANDIDATES_BY_COUNTRY: Record<Wc2026CountryCode, Wc2026Candi
     },
     },
     {
+      id: "jpn-matsuki-kurusei",
+      name: "松木玖生",
+      position: "MF" as SquadPosition,
+    age: 22,
+    club: "サウサンプトン",
+    stats: {
+      appearances: 0,
+      goals: 0,
+    },
+    },
+    {
       id: "jpn-mitoma-kaoru",
       name: "三笘薫",
       position: "MF" as SquadPosition,
@@ -444,6 +455,17 @@ export const WC2026_CANDIDATES_BY_COUNTRY: Record<Wc2026CountryCode, Wc2026Candi
     stats: {
       appearances: 14,
       goals: 10,
+    },
+    },
+    {
+      id: "jpn-asano-takuma",
+      name: "浅野拓磨",
+      position: "FW" as SquadPosition,
+    age: 29,
+    club: "RCDマジョルカ",
+    stats: {
+      appearances: 53,
+      goals: 9,
     },
     },
     {

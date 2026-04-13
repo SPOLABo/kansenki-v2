@@ -65,6 +65,7 @@ export default async function Wc2026SharePage({ params }: Props) {
   const raw = typeof data?.snapshotJson === 'string' ? data.snapshotJson : '';
   const parsed = raw ? (JSON.parse(raw) as any) : null;
   const players = (Array.isArray(parsed?.players) ? parsed.players : []) as SquadPlayerPrediction[];
+  const comment = typeof parsed?.comment === 'string' ? parsed.comment : '';
   const grouped = groupByPosition(players);
 
   const sortByStatus = (a: SquadPlayerPrediction, b: SquadPlayerPrediction) => {
@@ -124,6 +125,12 @@ export default async function Wc2026SharePage({ params }: Props) {
                 画像
               </a>
             </div>
+
+            {comment ? (
+              <div className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[12px] text-white/80 whitespace-pre-wrap break-words">
+                {comment}
+              </div>
+            ) : null}
 
             <div className="mt-4 space-y-5">
               {rows.map((row) => (
