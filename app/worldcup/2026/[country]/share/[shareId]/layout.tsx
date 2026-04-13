@@ -51,7 +51,10 @@ export async function generateMetadata({ params }: Props, parent: ResolvingMetad
     const description = 'W杯2026 予想メンバー';
     const baseUrl = getBaseUrlFromHeaders();
     const pageUrl = `${baseUrl}/worldcup/2026/${countrySlug}/share/${shareId}`;
-    const imageUrl = `${baseUrl}/api/wc2026-og/${encodeURIComponent(countrySlug)}/${encodeURIComponent(shareId)}?mode=pitch`;
+    const data = snap.data() as any;
+    const storedOg = typeof data?.ogImageUrl === 'string' && data.ogImageUrl.trim() ? data.ogImageUrl.trim() : null;
+    const imageUrl =
+      storedOg ?? `${baseUrl}/api/wc2026-og/${encodeURIComponent(countrySlug)}/${encodeURIComponent(shareId)}?mode=pitch`;
 
     return {
       title,
