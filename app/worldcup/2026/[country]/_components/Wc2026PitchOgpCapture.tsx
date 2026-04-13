@@ -14,7 +14,17 @@ export function Wc2026PitchOgpCapture(props: {
   return (
     <div
       id="wc2026-pitch-ogp-capture"
-      style={{ position: 'fixed', left: -10000, top: 0, width: 1200, height: 630, overflow: 'hidden' }}
+      style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        width: 1200,
+        height: 630,
+        overflow: 'hidden',
+        opacity: 0.001,
+        pointerEvents: 'none',
+        zIndex: -1,
+      }}
       aria-hidden
     >
       <div

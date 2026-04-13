@@ -51,6 +51,8 @@ export function useWc2026Share({
           const dataUrl = await toPng(el, {
             cacheBust: true,
             pixelRatio: 1,
+            width: 1200,
+            height: 630,
             backgroundColor: '#020617',
           });
           const objectRef = ref(storage, `wc2026PredictionShareOgp/${countrySlug}/${shareId}.png`);
