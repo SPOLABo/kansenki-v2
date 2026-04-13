@@ -54,6 +54,23 @@ export function useWc2026Share({
             width: 1200,
             height: 630,
             backgroundColor: '#020617',
+            style: {
+              opacity: '1',
+              transform: 'none',
+            },
+            onClone: (doc) => {
+              try {
+                const cloned = doc.getElementById('wc2026-pitch-ogp-capture') as HTMLElement | null;
+                if (!cloned) return;
+                cloned.style.opacity = '1';
+                cloned.style.transform = 'none';
+                cloned.style.left = '0px';
+                cloned.style.top = '0px';
+                cloned.style.zIndex = '0';
+              } catch {
+                // ignore
+              }
+            },
           });
           const objectRef = ref(storage, `wc2026PredictionShareOgp/${countrySlug}/${shareId}.png`);
           await uploadString(objectRef, dataUrl, 'data_url');

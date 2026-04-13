@@ -18,12 +18,12 @@ export function Wc2026PitchOgpCapture(props: {
         position: 'fixed',
         left: 0,
         top: 0,
+        transform: 'translate(-2000px, -2000px)',
         width: 1200,
         height: 630,
         overflow: 'hidden',
-        opacity: 0.001,
         pointerEvents: 'none',
-        zIndex: -1,
+        zIndex: 0,
       }}
       aria-hidden
     >
