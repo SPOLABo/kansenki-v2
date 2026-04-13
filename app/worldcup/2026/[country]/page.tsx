@@ -54,6 +54,49 @@ function statusMarkClassName(status: SquadStatus) {
   return 'text-white/60';
 }
 
+function statusRank(status: SquadStatus) {
+  return status === 'S' ? 0 : status === 'A' ? 1 : status === 'B' ? 2 : 3;
+}
+
+function pickTop(players: SquadPlayerPrediction[], count: number) {
+  return [...players]
+    .sort((a, b) => {
+      const r = statusRank(a.status) - statusRank(b.status);
+      if (r !== 0) return r;
+      return a.name.localeCompare(b.name, 'ja');
+    })
+    .slice(0, count);
+}
+
+type FormationSlotKey =
+  | 'ST'
+  | 'SS_L'
+  | 'SS_R'
+  | 'LM'
+  | 'LCM'
+  | 'RCM'
+  | 'RM'
+  | 'LCB'
+  | 'CB'
+  | 'RCB'
+  | 'GK';
+
+type SlotPos = { key: FormationSlotKey; leftPct: number; topPct: number; label: string };
+
+const FORMATION_3421_SLOTS: SlotPos[] = [
+  { key: 'ST', leftPct: 50, topPct: 10, label: 'TOP' },
+  { key: 'SS_L', leftPct: 35, topPct: 24, label: 'SH' },
+  { key: 'SS_R', leftPct: 65, topPct: 24, label: 'SH' },
+  { key: 'LM', leftPct: 18, topPct: 42, label: 'MF' },
+  { key: 'LCM', leftPct: 40, topPct: 44, label: 'MF' },
+  { key: 'RCM', leftPct: 60, topPct: 44, label: 'MF' },
+  { key: 'RM', leftPct: 82, topPct: 42, label: 'MF' },
+  { key: 'LCB', leftPct: 28, topPct: 66, label: 'CB' },
+  { key: 'CB', leftPct: 50, topPct: 70, label: 'CB' },
+  { key: 'RCB', leftPct: 72, topPct: 66, label: 'CB' },
+  { key: 'GK', leftPct: 50, topPct: 90, label: 'GK' },
+];
+
 function sanitizePlayersForFirestore(players: SquadPlayerPrediction[]): SquadPlayerPrediction[] {
   return players.map((p) => {
     const out: SquadPlayerPrediction = {
@@ -81,6 +124,11 @@ export default function Wc2026CountryPage() {
   const [shareLink, setShareLink] = useState<string | null>(null);
 
   const [predictionComment, setPredictionComment] = useState('');
+
+  const [squadViewMode, setSquadViewMode] = useState<'list' | 'pitch'>('list');
+
+  const [pitchSelectedSlot, setPitchSelectedSlot] = useState<FormationSlotKey | null>(null);
+  const [pitchOverrideBySlot, setPitchOverrideBySlot] = useState<Partial<Record<FormationSlotKey, string>>>({});
 
   const [openSquadSectionByKey, setOpenSquadSectionByKey] = useState<Record<string, boolean>>({
     GK: true,
@@ -286,7 +334,62 @@ export default function Wc2026CountryPage() {
   }
 
   const grouped = groupByPosition(players);
-  const selectedCount = players.filter((p) => p.status === 'S').length;
+  const pickedCount = players.length;
+  const sureCount = players.filter((p) => p.status === 'S').length;
+
+  const pitchData = useMemo(() => {
+    const gk = pickTop(grouped.GK, 1);
+    const cbs = pickTop(grouped.DF, 3);
+    const mids = pickTop(grouped.MF, 4);
+
+    const used = new Set<string>([...gk, ...cbs, ...mids].map((p) => p.id));
+
+    const remainingAttackPool = [...players]
+      .filter((p) => !used.has(p.id))
+      .filter((p) => p.position === 'FW' || p.position === 'MF');
+
+    const shadows = pickTop(remainingAttackPool, 2);
+    for (const p of shadows) used.add(p.id);
+
+    const remainingTopPool = [...players]
+      .filter((p) => !used.has(p.id))
+      .filter((p) => p.position === 'FW' || p.position === 'MF');
+    const top = pickTop(remainingTopPool, 1);
+    for (const p of top) used.add(p.id);
+
+    const assigned: Partial<Record<FormationSlotKey, SquadPlayerPrediction>> = {
+      GK: gk[0],
+      LCB: cbs[0],
+      CB: cbs[1],
+      RCB: cbs[2],
+      LM: mids[0],
+      LCM: mids[1],
+      RCM: mids[2],
+      RM: mids[3],
+      SS_L: shadows[0],
+      SS_R: shadows[1],
+      ST: top[0],
+    };
+
+    // Apply manual overrides (slot -> playerId)
+    for (const slot of Object.keys(pitchOverrideBySlot) as FormationSlotKey[]) {
+      const pid = pitchOverrideBySlot[slot];
+      if (!pid) continue;
+      const p = players.find((x) => x.id === pid) ?? null;
+      if (p) assigned[slot] = p;
+    }
+
+    const startingIds = new Set(Object.values(assigned).filter(Boolean).map((p) => (p as SquadPlayerPrediction).id));
+    const bench = [...players]
+      .filter((p) => !startingIds.has(p.id))
+      .sort((a, b) => {
+        const r = statusRank(a.status) - statusRank(b.status);
+        if (r !== 0) return r;
+        return a.name.localeCompare(b.name, 'ja');
+      });
+
+    return { assigned, bench };
+  }, [grouped.DF, grouped.GK, grouped.MF, pitchOverrideBySlot, players]);
 
   const squadRows = useMemo(() => {
     const byId = new Map<string, SquadPlayerPrediction>();
@@ -329,7 +432,7 @@ export default function Wc2026CountryPage() {
         <div className="px-1 pb-3 flex items-start justify-between gap-3">
           <div>
             <h1 className="text-lg font-bold text-white">{country.nameJa}：W杯 2026 予想</h1>
-            <div className="mt-1 text-xs text-white/60">選出：{selectedCount}人（自分の予想）</div>
+            <div className="mt-1 text-xs text-white/60">選出：{pickedCount}人（当確◎：{sureCount}）</div>
           </div>
           <Link href="/worldcup/2026" className="text-xs text-white/70 underline shrink-0">
             国一覧
@@ -395,68 +498,211 @@ export default function Wc2026CountryPage() {
               </div>
             ) : null}
 
-            <div className="mt-4 space-y-5">
-              {squadRows.map((row) => (
-                <div key={row.key}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpenSquadSectionByKey((prev) => ({ ...prev, [row.key]: !(prev[row.key] ?? true) }));
-                    }}
-                    aria-expanded={openSquadSectionByKey[row.key] ?? true}
-                    className="w-full text-center py-2 -my-2"
-                  >
-                    <div className="text-xs font-bold tracking-[0.3em] text-yellow-200/90">
-                      {row.title}
-                      <span className="ml-2 text-[10px] tracking-normal text-white/70">({row.players.length})</span>
-                      <span className="ml-2 text-[10px] tracking-normal text-white/60">
-                        {openSquadSectionByKey[row.key] ?? true ? '閉じる' : '開く'}
-                      </span>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSquadViewMode('list')}
+                className={`rounded-full px-3 py-1 text-xs border transition-colors ${
+                  squadViewMode === 'list'
+                    ? 'bg-white/15 text-white border-white/20'
+                    : 'bg-transparent text-white/70 border-white/10 hover:bg-white/10'
+                }`}
+              >
+                表
+              </button>
+              <button
+                type="button"
+                onClick={() => setSquadViewMode('pitch')}
+                className={`rounded-full px-3 py-1 text-xs border transition-colors ${
+                  squadViewMode === 'pitch'
+                    ? 'bg-white/15 text-white border-white/20'
+                    : 'bg-transparent text-white/70 border-white/10 hover:bg-white/10'
+                }`}
+              >
+                ピッチ（3-4-2-1）
+              </button>
+            </div>
+
+            {squadViewMode === 'pitch' ? (
+              <div className="mt-4">
+                <div className="rounded-2xl border border-white/10 bg-black/20 overflow-hidden">
+                  <div className="relative w-full aspect-[4/5] bg-gradient-to-b from-emerald-700/40 to-emerald-900/40">
+                    <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.0) 0px, rgba(255,255,255,0.0) 22px, rgba(0,0,0,0.14) 22px, rgba(0,0,0,0.14) 44px)' }} />
+                    <div className="absolute inset-0">
+                      <div className="absolute left-[8%] right-[8%] top-[6%] bottom-[6%] border border-white/35 rounded-sm" />
+                      <div className="absolute left-[8%] right-[8%] top-1/2 -translate-y-1/2 border-t border-white/35" />
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[34%] aspect-square rounded-full border border-white/35" />
+                      <div className="absolute left-[24%] right-[24%] bottom-[6%] h-[22%] border border-white/35" />
+                      <div className="absolute left-[24%] right-[24%] top-[6%] h-[22%] border border-white/35" />
                     </div>
-                  </button>
 
-                  {openSquadSectionByKey[row.key] ?? true ? (
-                    <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-3">
-                      {row.players.length === 0 ? (
-                        <div className="col-span-3 text-center text-xs text-white/50">未選出</div>
+                    {FORMATION_3421_SLOTS.map((slot) => {
+                      const p = pitchData.assigned[slot.key];
+                      const selected = pitchSelectedSlot === slot.key;
+                      return (
+                        <div
+                          key={slot.key}
+                          className="absolute -translate-x-1/2 -translate-y-1/2"
+                          style={{ left: `${slot.leftPct}%`, top: `${slot.topPct}%` }}
+                        >
+                          <button
+                            type="button"
+                            disabled={!canEdit}
+                            onClick={() => {
+                              setPitchSelectedSlot((prev) => (prev === slot.key ? null : slot.key));
+                            }}
+                            className={`px-2 py-1 rounded-full text-[11px] text-white/90 whitespace-nowrap max-w-[30vw] truncate border transition-colors ${
+                              selected ? 'bg-white/20 border-white/30' : 'bg-black/55 border-white/10 hover:bg-black/65'
+                            } ${!canEdit ? 'cursor-default' : ''}`}
+                          >
+                            {p ? (
+                              <>
+                                <span className={statusMarkClassName(p.status)}>{statusMark(p.status)}</span>
+                                <span className="ml-1 font-semibold">{p.name}</span>
+                              </>
+                            ) : (
+                              <span className="text-white/60">{slot.label}</span>
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="p-3 border-t border-white/10">
+                    <div className="text-xs text-white/70">ベンチ</div>
+                    {canEdit ? (
+                      <div className="mt-1 text-[11px] text-white/60">
+                        枠をタップして選択 → ベンチの選手をタップで入れ替え
+                      </div>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {pitchData.bench.length === 0 ? (
+                        <div className="text-xs text-white/50">なし</div>
                       ) : (
-                        row.players.map((p) => (
-                          <div key={p.id} className="min-w-0 text-center">
-                            {(() => {
-                              const cand = candidates.find((c) => c.id === p.id);
-                              const apps = cand?.stats?.appearances;
-                              const goals = cand?.stats?.goals;
-                              const statLine =
-                                typeof apps === 'number' || typeof goals === 'number'
-                                  ? `${typeof apps === 'number' ? `${apps} cap` : ''}${
-                                      typeof apps === 'number' && typeof goals === 'number' ? ' / ' : ''
-                                    }${typeof goals === 'number' ? `${goals}G` : ''}`
-                                  : '';
-
-                              return (
-                                <>
-                                  <div className="text-sm font-extrabold text-white truncate">
-                                    {p.name}
-                                    {typeof cand?.age === 'number' ? (
-                                      <span className="ml-1 text-[11px] font-semibold text-white/75">({cand.age})</span>
-                                    ) : null}
-                                    <span className={`ml-1 text-[10px] ${statusMarkClassName(p.status)}`}>{statusMark(p.status)}</span>
-                                  </div>
-                                  <div className="mt-0.5 text-[10px] text-white/60 truncate">{cand?.club ?? ''}</div>
-                                  {statLine ? (
-                                    <div className="mt-0.5 text-[10px] text-white/55 truncate">{statLine}</div>
-                                  ) : null}
-                                </>
-                              );
-                            })()}
-                          </div>
+                        pitchData.bench.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            disabled={!canEdit || !pitchSelectedSlot}
+                            onClick={() => {
+                              const slot = pitchSelectedSlot;
+                              if (!slot) return;
+                              setPitchOverrideBySlot((prev) => {
+                                const next: Partial<Record<FormationSlotKey, string>> = { ...prev, [slot]: p.id };
+                                // Avoid duplicates: remove this player from other slots
+                                for (const k of Object.keys(next) as FormationSlotKey[]) {
+                                  if (k !== slot && next[k] === p.id) delete next[k];
+                                }
+                                return next;
+                              });
+                            }}
+                            className={`px-2 py-1 rounded-full border text-[11px] transition-colors ${
+                              pitchSelectedSlot && canEdit
+                                ? 'bg-white/5 border-white/10 text-white/85 hover:bg-white/10'
+                                : 'bg-white/5 border-white/10 text-white/50'
+                            }`}
+                          >
+                            <span className={statusMarkClassName(p.status)}>{statusMark(p.status)}</span>
+                            <span className="ml-1">{p.name}</span>
+                          </button>
                         ))
                       )}
                     </div>
-                  ) : null}
+
+                    {canEdit && pitchSelectedSlot ? (
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPitchOverrideBySlot((prev) => {
+                              const next = { ...prev };
+                              delete next[pitchSelectedSlot];
+                              return next;
+                            });
+                          }}
+                          className="rounded-full px-3 py-1 text-xs border border-white/10 bg-transparent text-white/70 hover:bg-white/10 transition-colors"
+                        >
+                          選択枠の上書きを解除
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPitchSelectedSlot(null);
+                          }}
+                          className="rounded-full px-3 py-1 text-xs border border-white/10 bg-transparent text-white/70 hover:bg-white/10 transition-colors"
+                        >
+                          選択解除
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-5">
+                {squadRows.map((row) => (
+                  <div key={row.key}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenSquadSectionByKey((prev) => ({ ...prev, [row.key]: !(prev[row.key] ?? true) }));
+                      }}
+                      aria-expanded={openSquadSectionByKey[row.key] ?? true}
+                      className="w-full text-center py-2 -my-2"
+                    >
+                      <div className="text-xs font-bold tracking-[0.3em] text-yellow-200/90">
+                        {row.title}
+                        <span className="ml-2 text-[10px] tracking-normal text-white/70">({row.players.length})</span>
+                        <span className="ml-2 text-[10px] tracking-normal text-white/60">
+                          {openSquadSectionByKey[row.key] ?? true ? '閉じる' : '開く'}
+                        </span>
+                      </div>
+                    </button>
+
+                    {openSquadSectionByKey[row.key] ?? true ? (
+                      <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-3">
+                        {row.players.length === 0 ? (
+                          <div className="col-span-3 text-center text-xs text-white/50">未選出</div>
+                        ) : (
+                          row.players.map((p) => (
+                            <div key={p.id} className="min-w-0 text-center">
+                              {(() => {
+                                const cand = candidates.find((c) => c.id === p.id);
+                                const apps = cand?.stats?.appearances;
+                                const goals = cand?.stats?.goals;
+                                const statLine =
+                                  typeof apps === 'number' || typeof goals === 'number'
+                                    ? `${typeof apps === 'number' ? `${apps} cap` : ''}${
+                                        typeof apps === 'number' && typeof goals === 'number' ? ' / ' : ''
+                                      }${typeof goals === 'number' ? `${goals}G` : ''}`
+                                    : '';
+
+                                return (
+                                  <>
+                                    <div className="text-sm font-extrabold text-white truncate">
+                                      {p.name}
+                                      {typeof cand?.age === 'number' ? (
+                                        <span className="ml-1 text-[11px] font-semibold text-white/75">({cand.age})</span>
+                                      ) : null}
+                                      <span className={`ml-1 text-[10px] ${statusMarkClassName(p.status)}`}>{statusMark(p.status)}</span>
+                                    </div>
+                                    <div className="mt-0.5 text-[10px] text-white/60 truncate">{cand?.club ?? ''}</div>
+                                    {statLine ? (
+                                      <div className="mt-0.5 text-[10px] text-white/55 truncate">{statLine}</div>
+                                    ) : null}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-5">
               <div className="text-xs text-white/70">コメント（最大500文字）</div>

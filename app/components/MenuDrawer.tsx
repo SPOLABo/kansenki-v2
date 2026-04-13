@@ -5,18 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
 
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { BookOpen, BedDouble, MapPin, Plus } from 'lucide-react';
-
 // 型定義を明確化
 interface MenuItem {
   label: string;
@@ -91,9 +79,6 @@ export default function MenuDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   useTheme();
   const [openSection, setOpenSection] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  const router = useRouter();
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const handleSectionClick = (section: string) => {
@@ -159,52 +144,8 @@ export default function MenuDrawer() {
               </div>
             ))}
           </div>
-
-
         </div>
       </aside>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogTrigger asChild>
-          <Button className="fixed bottom-6 right-6 z-50 h-16 w-16 rounded-full shadow-lg transition-transform transform hover:scale-110 ease-in-out duration-200 bg-white hover:bg-gray-200">
-            <Plus className="h-8 w-8 text-blue-500" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>何を投稿しますか？</DialogTitle>
-            <DialogDescription>
-              共有したい情報の種類を選んでください。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Button
-              variant="outline"
-              className="justify-start gap-2 text-base py-6"
-              onClick={() => { setIsDialogOpen(false); router.push('/form'); }}
-            >
-              <BookOpen className="h-5 w-5" />
-              観戦記を投稿
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start gap-2 text-base py-6"
-              onClick={() => { setIsDialogOpen(false); router.push('/create-spot?type=spot'); }}
-            >
-              <MapPin className="h-5 w-5" />
-              おススメスポットを投稿
-            </Button>
-            <Button
-              variant="outline"
-              className="justify-start gap-2 text-base py-6"
-              onClick={() => { setIsDialogOpen(false); router.push('/create-spot?type=hotel'); }}
-            >
-              <BedDouble className="h-5 w-5" />
-              宿泊先を投稿
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

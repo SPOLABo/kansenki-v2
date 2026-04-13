@@ -3,7 +3,7 @@ import React from 'react';
 import { getWc2026CountryBySlug } from '@/lib/worldcup/wc2026Countries';
 import { WC2026_CANDIDATES_BY_COUNTRY } from '@/lib/worldcup/wc2026Candidates';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -71,12 +71,46 @@ function groupByPosition(players: Array<{ id?: string; name: string; status?: st
   return out;
 }
 
+function rankStatus(s: string | undefined) {
+  return s === 'S' ? 0 : s === 'A' ? 1 : s === 'B' ? 2 : 3;
+}
+
+function pickTop<T extends { status?: string; name: string }>(players: T[], count: number) {
+  return [...players]
+    .sort((a, b) => {
+      const r = rankStatus(a.status) - rankStatus(b.status);
+      if (r !== 0) return r;
+      return a.name.localeCompare(b.name, 'ja');
+    })
+    .slice(0, count);
+}
+
+type PitchSlot = 'ST' | 'SS_L' | 'SS_R' | 'LM' | 'LCM' | 'RCM' | 'RM' | 'LCB' | 'CB' | 'RCB' | 'GK';
+type PitchSlotPos = { key: PitchSlot; leftPct: number; topPct: number };
+
+const PITCH_3421_SLOTS: PitchSlotPos[] = [
+  { key: 'ST', leftPct: 50, topPct: 14 },
+  { key: 'SS_L', leftPct: 35, topPct: 28 },
+  { key: 'SS_R', leftPct: 65, topPct: 28 },
+  { key: 'LM', leftPct: 18, topPct: 46 },
+  { key: 'LCM', leftPct: 40, topPct: 48 },
+  { key: 'RCM', leftPct: 60, topPct: 48 },
+  { key: 'RM', leftPct: 82, topPct: 46 },
+  { key: 'LCB', leftPct: 28, topPct: 68 },
+  { key: 'CB', leftPct: 50, topPct: 72 },
+  { key: 'RCB', leftPct: 72, topPct: 68 },
+  { key: 'GK', leftPct: 50, topPct: 88 },
+];
+
 export async function GET(_req: Request, context: Context) {
   try {
     const { country: countrySlug, shareId } = context.params;
     const country = getWc2026CountryBySlug(countrySlug);
     const title = country ? `${country.nameEn.toUpperCase()} WC2026` : 'WC2026';
     const sub = `share:${shareId.slice(0, 8)}`;
+
+    const urlObj = new URL(_req.url);
+    const mode = urlObj.searchParams.get('mode') ?? 'list';
 
     const origin = (() => {
       try {
@@ -105,30 +139,6 @@ export async function GET(_req: Request, context: Context) {
         position: typeof p?.position === 'string' ? p.position : undefined,
       }))
       .filter((p) => p.name);
-
-    const rank = (s: string | undefined) => (s === 'S' ? 0 : s === 'A' ? 1 : s === 'B' ? 2 : 3);
-    const ordered = [...picked]
-      .sort((a, b) => {
-        const r = rank(a.status) - rank(b.status);
-        if (r !== 0) return r;
-        return a.name.localeCompare(b.name, 'ja');
-      })
-      .slice(0, 18);
-
-    const grouped = groupByPosition(ordered);
-    const isJapan = countrySlug === 'japan';
-    const rows = isJapan
-      ? [
-          { title: '-GK-', key: 'GK', players: grouped.GK },
-          { title: '-DF-', key: 'DF', players: grouped.DF },
-          { title: '-MF/FW-', key: 'MFFW', players: [...grouped.MF, ...grouped.FW] },
-        ]
-      : [
-          { title: '-GK-', key: 'GK', players: grouped.GK },
-          { title: '-DF-', key: 'DF', players: grouped.DF },
-          { title: '-MF-', key: 'MF', players: grouped.MF },
-          { title: '-FW-', key: 'FW', players: grouped.FW },
-        ];
 
     const candidates = country?.code ? (WC2026_CANDIDATES_BY_COUNTRY[country.code] as Candidate[]) : ([] as Candidate[]);
     const candById = new Map<string, Candidate>();
@@ -194,106 +204,306 @@ export async function GET(_req: Request, context: Context) {
       );
     };
 
-    const root = React.createElement(
-      'div',
-      {
-        style: {
-          width: '100%',
-          height: '100%',
-          background: 'linear-gradient(180deg, #020617 0%, #0b1533 50%, #070d1f 100%)',
-          color: 'white',
-          padding: 34,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-        },
-      },
-      React.createElement(
-        'div',
-        {
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
+
+    const root = (() => {
+      if (mode === 'pitch') {
+        const groupedAll = groupByPosition(picked);
+
+        const gk = pickTop(groupedAll.GK, 1);
+        const cbs = pickTop(groupedAll.DF, 3);
+        const mids = pickTop(groupedAll.MF, 4);
+
+        const used = new Set<string>([...gk, ...cbs, ...mids].map((p) => p.id ?? p.name));
+        const remainingAttackPool = [...picked]
+          .filter((p) => !used.has(p.id ?? p.name))
+          .filter((p) => p.position === 'FW' || p.position === 'MF');
+        const shadows = pickTop(remainingAttackPool, 2);
+        for (const p of shadows) used.add(p.id ?? p.name);
+
+        const remainingTopPool = [...picked]
+          .filter((p) => !used.has(p.id ?? p.name))
+          .filter((p) => p.position === 'FW' || p.position === 'MF');
+        const top = pickTop(remainingTopPool, 1);
+
+        const assigned: Partial<Record<PitchSlot, PickedPlayer>> = {
+          GK: gk[0],
+          LCB: cbs[0],
+          CB: cbs[1],
+          RCB: cbs[2],
+          LM: mids[0],
+          LCM: mids[1],
+          RCM: mids[2],
+          RM: mids[3],
+          SS_L: shadows[0],
+          SS_R: shadows[1],
+          ST: top[0],
+        };
+
+        const playerTag = (p: PickedPlayer | undefined) => {
+          if (!p) return null;
+          return React.createElement(
+            'div',
+            {
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 12px',
+                borderRadius: 999,
+                border: '1px solid rgba(255,255,255,0.14)',
+                background: 'rgba(0,0,0,0.55)',
+                color: 'rgba(255,255,255,0.92)',
+                fontSize: 18,
+                fontWeight: 800,
+                maxWidth: 320,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              },
+            },
+            React.createElement('span', { style: { color: statusMarkColor(p.status), fontSize: 18 } }, statusMark(p.status)),
+            React.createElement('span', null, p.name)
+          );
+        };
+
+        const pitch = React.createElement(
+          'div',
+          {
+            style: {
+              position: 'relative',
+              width: '100%',
+              height: 420,
+              borderRadius: 26,
+              overflow: 'hidden',
+              background: 'linear-gradient(180deg, rgba(16,185,129,0.35) 0%, rgba(6,95,70,0.35) 100%)',
+              border: '1px solid rgba(255,255,255,0.12)',
+            },
           },
-        },
-        React.createElement('div', { style: { fontSize: 46, fontWeight: 800, letterSpacing: -0.5 } }, title),
-        React.createElement('div', { style: { marginTop: 8, fontSize: 22, opacity: 0.85 } }, 'Squad Prediction'),
-        React.createElement('div', { style: { marginTop: 6, fontSize: 18, opacity: 0.65 } }, sub)
-      ),
-      React.createElement(
-        'div',
-        {
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-            padding: 14,
-            borderRadius: 24,
-            border: '1px solid rgba(255,255,255,0.12)',
-            background: 'rgba(255,255,255,0.06)',
-          },
-        },
-        rows.length === 0
-          ? React.createElement('div', { style: { fontSize: 28, opacity: 0.85, display: 'flex' } }, 'No picks yet')
-          : rows.map((row) =>
-              React.createElement(
-                'div',
-                {
-                  key: row.key,
-                  style: {
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 10,
-                  },
+          React.createElement('div', {
+            style: {
+              position: 'absolute',
+              inset: 0,
+              opacity: 0.35,
+              backgroundImage:
+                'repeating-linear-gradient(0deg, rgba(255,255,255,0.0) 0px, rgba(255,255,255,0.0) 24px, rgba(0,0,0,0.18) 24px, rgba(0,0,0,0.18) 48px)',
+            },
+          }),
+          React.createElement('div', {
+            style: { position: 'absolute', left: '8%', right: '8%', top: '6%', bottom: '6%', border: '1px solid rgba(255,255,255,0.35)' },
+          }),
+          React.createElement('div', {
+            style: {
+              position: 'absolute',
+              left: '8%',
+              right: '8%',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              borderTop: '1px solid rgba(255,255,255,0.35)',
+            },
+          }),
+          React.createElement('div', {
+            style: {
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              width: '34%',
+              height: '34%',
+              transform: 'translate(-50%, -50%)',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.35)',
+            },
+          }),
+          React.createElement('div', {
+            style: {
+              position: 'absolute',
+              left: '24%',
+              right: '24%',
+              bottom: '6%',
+              height: '22%',
+              border: '1px solid rgba(255,255,255,0.35)',
+            },
+          }),
+          React.createElement('div', {
+            style: {
+              position: 'absolute',
+              left: '24%',
+              right: '24%',
+              top: '6%',
+              height: '22%',
+              border: '1px solid rgba(255,255,255,0.35)',
+            },
+          }),
+          ...PITCH_3421_SLOTS.map((slot) => {
+            const p = assigned[slot.key];
+            return React.createElement(
+              'div',
+              {
+                key: slot.key,
+                style: {
+                  position: 'absolute',
+                  left: `${slot.leftPct}%`,
+                  top: `${slot.topPct}%`,
+                  transform: 'translate(-50%, -50%)',
+                  display: 'flex',
                 },
+              },
+              playerTag(p)
+            );
+          })
+        );
+
+        return React.createElement(
+          'div',
+          {
+            style: {
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(180deg, #020617 0%, #0b1533 50%, #070d1f 100%)',
+              color: 'white',
+              padding: 34,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            },
+          },
+          React.createElement(
+            'div',
+            { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18 } },
+            React.createElement(
+              'div',
+              { style: { display: 'flex', flexDirection: 'column' } },
+              React.createElement('div', { style: { fontSize: 44, fontWeight: 800, letterSpacing: -0.5 } }, title),
+              React.createElement('div', { style: { marginTop: 8, fontSize: 22, opacity: 0.85 } }, 'Pitch (3-4-2-1)'),
+              React.createElement('div', { style: { marginTop: 6, fontSize: 18, opacity: 0.65 } }, sub)
+            ),
+            React.createElement(
+              'div',
+              { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 } },
+              React.createElement('div', { style: { fontSize: 16, opacity: 0.8, display: 'flex' } }, 'footballtop.net'),
+              React.createElement('div', { style: { fontSize: 16, opacity: 0.8, display: 'flex' } }, 'S:◎ A:○ B:△ ?:★')
+            )
+          ),
+          pitch
+        );
+      }
+
+      const ordered = pickTop(picked, 18);
+      const grouped = groupByPosition(ordered);
+      const isJapan = countrySlug === 'japan';
+      const rows = isJapan
+        ? [
+            { title: '-GK-', key: 'GK', players: grouped.GK },
+            { title: '-DF-', key: 'DF', players: grouped.DF },
+            { title: '-MF/FW-', key: 'MFFW', players: [...grouped.MF, ...grouped.FW] },
+          ]
+        : [
+            { title: '-GK-', key: 'GK', players: grouped.GK },
+            { title: '-DF-', key: 'DF', players: grouped.DF },
+            { title: '-MF-', key: 'MF', players: grouped.MF },
+            { title: '-FW-', key: 'FW', players: grouped.FW },
+          ];
+
+      return React.createElement(
+        'div',
+        {
+          style: {
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(180deg, #020617 0%, #0b1533 50%, #070d1f 100%)',
+            color: 'white',
+            padding: 34,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          },
+        },
+        React.createElement(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+            },
+          },
+          React.createElement('div', { style: { fontSize: 46, fontWeight: 800, letterSpacing: -0.5 } }, title),
+          React.createElement('div', { style: { marginTop: 8, fontSize: 22, opacity: 0.85 } }, 'Squad Prediction'),
+          React.createElement('div', { style: { marginTop: 6, fontSize: 18, opacity: 0.65 } }, sub)
+        ),
+        React.createElement(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              padding: 14,
+              borderRadius: 24,
+              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'rgba(255,255,255,0.06)',
+            },
+          },
+          rows.length === 0
+            ? React.createElement('div', { style: { fontSize: 28, opacity: 0.85, display: 'flex' } }, 'No picks yet')
+            : rows.map((row) =>
                 React.createElement(
                   'div',
                   {
+                    key: row.key,
                     style: {
                       display: 'flex',
-                      justifyContent: 'center',
-                      fontSize: 14,
-                      fontWeight: 800,
-                      letterSpacing: 4,
-                      color: 'rgba(254, 240, 138, 0.92)',
+                      flexDirection: 'column',
+                      gap: 10,
                     },
                   },
-                  row.title
-                ),
-                React.createElement(
-                  'div',
-                  {
-                    style: {
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      justifyContent: 'flex-start',
-                      gap: 0,
+                  React.createElement(
+                    'div',
+                    {
+                      style: {
+                        display: 'flex',
+                        justifyContent: 'center',
+                        fontSize: 14,
+                        fontWeight: 800,
+                        letterSpacing: 4,
+                        color: 'rgba(254, 240, 138, 0.92)',
+                      },
                     },
-                  },
-                  row.players.length === 0
-                    ? React.createElement(
-                        'div',
-                        { style: { display: 'flex', justifyContent: 'center', width: '100%', fontSize: 14, opacity: 0.55 } },
-                        '未選出'
-                      )
-                    : row.players.map(renderPlayerCell)
+                    row.title
+                  ),
+                  React.createElement(
+                    'div',
+                    {
+                      style: {
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'flex-start',
+                        gap: 0,
+                      },
+                    },
+                    row.players.length === 0
+                      ? React.createElement(
+                          'div',
+                          { style: { display: 'flex', justifyContent: 'center', width: '100%', fontSize: 14, opacity: 0.55 } },
+                          '未選出'
+                        )
+                      : row.players.map(renderPlayerCell)
+                  )
                 )
               )
-            )
-      ),
-      React.createElement(
-        'div',
-        {
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+        ),
+        React.createElement(
+          'div',
+          {
+            style: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            },
           },
-        },
-        React.createElement('div', { style: { fontSize: 16, opacity: 0.8, display: 'flex' } }, 'footballtop.net'),
-        React.createElement('div', { style: { fontSize: 16, opacity: 0.8, display: 'flex' } }, 'S:◎ A:○ B:△ ?:★')
-      )
-    );
+          React.createElement('div', { style: { fontSize: 16, opacity: 0.8, display: 'flex' } }, 'footballtop.net'),
+          React.createElement('div', { style: { fontSize: 16, opacity: 0.8, display: 'flex' } }, 'S:◎ A:○ B:△ ?:★')
+        )
+      );
+    })();
 
     const image = new ImageResponse(root, {
       width: 1200,
