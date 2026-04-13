@@ -275,19 +275,23 @@ export async function GET(_req: Request, context: Context) {
               height: 420,
               borderRadius: 26,
               overflow: 'hidden',
-              background: 'linear-gradient(180deg, rgba(16,185,129,0.35) 0%, rgba(6,95,70,0.35) 100%)',
+              background: 'linear-gradient(180deg, rgba(16,185,129,0.32) 0%, rgba(6,95,70,0.32) 100%)',
               border: '1px solid rgba(255,255,255,0.12)',
             },
           },
-          React.createElement('div', {
-            style: {
-              position: 'absolute',
-              inset: 0,
-              opacity: 0.35,
-              backgroundImage:
-                'repeating-linear-gradient(0deg, rgba(255,255,255,0.0) 0px, rgba(255,255,255,0.0) 24px, rgba(0,0,0,0.18) 24px, rgba(0,0,0,0.18) 48px)',
-            },
-          }),
+          React.createElement(
+            'div',
+            { style: { position: 'absolute', inset: 0, opacity: 0.18, display: 'flex', flexDirection: 'column' } },
+            ...Array.from({ length: 10 }).map((_, i) =>
+              React.createElement('div', {
+                key: `stripe-${i}`,
+                style: {
+                  flex: 1,
+                  background: i % 2 === 0 ? 'rgba(0,0,0,0.20)' : 'rgba(255,255,255,0.00)',
+                },
+              })
+            )
+          ),
           React.createElement('div', {
             style: { position: 'absolute', left: '8%', right: '8%', top: '6%', bottom: '6%', border: '1px solid rgba(255,255,255,0.35)' },
           }),
