@@ -3,7 +3,7 @@ import React from 'react';
 import { getWc2026CountryBySlug } from '@/lib/worldcup/wc2026Countries';
 import { WC2026_CANDIDATES_BY_COUNTRY } from '@/lib/worldcup/wc2026Candidates';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -505,19 +505,9 @@ export async function GET(_req: Request, context: Context) {
       );
     })();
 
-    const image = new ImageResponse(root, {
+    return new ImageResponse(root, {
       width: 1200,
       height: 630,
-    });
-
-    const buf = await image.arrayBuffer();
-    return new Response(buf, {
-      status: 200,
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'no-store, max-age=0',
-        'Content-Length': String(buf.byteLength),
-      },
     });
   } catch (e: any) {
     return new Response(typeof e?.stack === 'string' ? e.stack : 'failed', {
@@ -528,4 +518,8 @@ export async function GET(_req: Request, context: Context) {
       },
     });
   }
+}
+
+export async function HEAD(req: Request, context: Context) {
+  return GET(req, context);
 }
