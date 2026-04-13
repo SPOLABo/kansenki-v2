@@ -41,6 +41,11 @@ function statusMark(status: string | undefined) {
   return '★';
 }
 
+function statusMarkColor(status: string | undefined) {
+  if (status === 'S' || status === '!?') return '#fde047';
+  return 'rgba(255,255,255,0.7)';
+}
+
 function safeName(v: unknown) {
   return typeof v === 'string' ? v.trim() : '';
 }
@@ -140,7 +145,11 @@ export async function GET(_req: Request, context: Context) {
         );
       }
       nameLineChildren.push(
-        React.createElement('span', { style: { marginLeft: 6, fontSize: 16, opacity: 0.7 } }, statusMark(p.status))
+        React.createElement(
+          'span',
+          { style: { marginLeft: 6, fontSize: 16, opacity: 0.95, color: statusMarkColor(p.status) } },
+          statusMark(p.status)
+        )
       );
 
       return React.createElement(

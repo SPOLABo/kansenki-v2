@@ -31,6 +31,11 @@ function statusMark(status: SquadStatus) {
   return '★';
 }
 
+function statusMarkClassName(status: SquadStatus) {
+  if (status === 'S' || status === '!?') return 'text-yellow-200/90';
+  return 'text-white/60';
+}
+
 function groupByPosition(players: SquadPlayerPrediction[]) {
   const out: Record<SquadPosition, SquadPlayerPrediction[]> = { GK: [], DF: [], MF: [], FW: [] };
   for (const p of players) out[p.position].push(p);
@@ -158,7 +163,7 @@ export default async function Wc2026SharePage({ params }: Props) {
                               {typeof cand?.age === 'number' ? (
                                 <span className="ml-1 text-[11px] font-semibold text-white/75">({cand.age})</span>
                               ) : null}
-                              <span className="ml-1 text-[10px] text-white/60">{statusMark(p.status)}</span>
+                              <span className={`ml-1 text-[10px] ${statusMarkClassName(p.status)}`}>{statusMark(p.status)}</span>
                             </div>
                             <div className="mt-0.5 text-[10px] text-white/60 truncate">{cand?.club ?? ''}</div>
                             {statLine ? <div className="mt-0.5 text-[10px] text-white/55 truncate">{statLine}</div> : null}
