@@ -27,16 +27,16 @@ export async function generateMetadata({ params }: Props, parent: ResolvingMetad
   const country = getWc2026CountryBySlug(countrySlug);
 
   const fallbackTitle = country ? `${country.nameJa}：W杯2026 予想` : 'W杯2026 予想';
+  const baseUrl = getBaseUrlFromHeaders();
+  const fixedImageUrl = `${baseUrl}/wc2026-japan-pitch.png`;
 
   const db = getServerDb();
   if (!db) {
-    const baseUrl = getBaseUrlFromHeaders();
     const pageUrl = `${baseUrl}/worldcup/2026/${countrySlug}/share/${shareId}`;
-    const imageUrl = `${baseUrl}/api/wc2026-og/${encodeURIComponent(countrySlug)}/${encodeURIComponent(shareId)}?mode=pitch`;
     return {
       title: fallbackTitle,
-      openGraph: { title: fallbackTitle, images: [{ url: imageUrl, width: 1200, height: 630 }], url: pageUrl },
-      twitter: { card: 'summary_large_image', title: fallbackTitle, images: [imageUrl] },
+      openGraph: { title: fallbackTitle, images: [{ url: fixedImageUrl, width: 1200, height: 630 }], url: pageUrl },
+      twitter: { card: 'summary_large_image', title: fallbackTitle, images: [fixedImageUrl] },
     };
   }
 
@@ -49,12 +49,10 @@ export async function generateMetadata({ params }: Props, parent: ResolvingMetad
 
     const title = fallbackTitle;
     const description = 'W杯2026 予想メンバー';
-    const baseUrl = getBaseUrlFromHeaders();
     const pageUrl = `${baseUrl}/worldcup/2026/${countrySlug}/share/${shareId}`;
     const data = snap.data() as any;
     const storedOg = typeof data?.ogImageUrl === 'string' && data.ogImageUrl.trim() ? data.ogImageUrl.trim() : null;
-    const imageUrl =
-      storedOg ?? `${baseUrl}/api/wc2026-og/${encodeURIComponent(countrySlug)}/${encodeURIComponent(shareId)}?mode=pitch`;
+    const imageUrl = fixedImageUrl;
 
     return {
       title,
