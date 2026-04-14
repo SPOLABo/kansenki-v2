@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { toPng } from 'html-to-image';
 import { useAuth } from '@/contexts/AuthContext';
 import { getWc2026CountryBySlug } from '@/lib/worldcup/wc2026Countries';
 import { WC2026_CANDIDATES_BY_COUNTRY } from '@/lib/worldcup/wc2026Candidates';
@@ -50,9 +51,9 @@ export default function Wc2026CountryPage() {
     setStatusMessage,
   });
 
+  const [shareImageBusy, setShareImageBusy] = useState(false);
+
   const [squadViewMode, setSquadViewMode] = useState<'list' | 'pitch'>('list');
-  const [pitchImageMode, setPitchImageMode] = useState(false);
-  const [pitchPngBusy, setPitchPngBusy] = useState(false);
 
   const [pitchSelectedSlot, setPitchSelectedSlot] = useState<FormationSlotKey | null>(null);
   const [pitchOverrideBySlot, setPitchOverrideBySlot] = useState<Partial<Record<FormationSlotKey, string>>>({});
@@ -254,49 +255,7 @@ export default function Wc2026CountryPage() {
                 </div>
                 <div className="mt-1 text-xs text-white/70">FIFA ワールドカップ 2026 予想メンバー（自分）</div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  disabled={!canEdit || sharing}
-                  onClick={share}
-                  className="rounded-xl px-3 py-2 text-xs bg-black/70 text-white border border-white/10 hover:bg-black/80 transition-colors disabled:opacity-50"
-                >
-                  {sharing ? '作成中...' : 'Xで共有'}
-                </button>
-                <button
-                  type="button"
-                  disabled={!canEdit || saving}
-                  onClick={save}
-                  className="rounded-xl px-3 py-2 text-xs bg-white/10 text-gray-100 border border-white/10 hover:bg-white/15 transition-colors disabled:opacity-50"
-                >
-                  {saving ? '保存中...' : '保存'}
-                </button>
-              </div>
             </div>
-
-            {statusMessage ? <div className="mt-2 text-xs text-white/70">{statusMessage}</div> : null}
-
-            {shareLink ? (
-              <div className="mt-3 flex items-center gap-2">
-                <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-white/80 truncate">
-                  {shareLink}
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(shareLink);
-                      setStatusMessage('共有リンクをコピーしました');
-                    } catch {
-                      setStatusMessage('コピーできませんでした');
-                    }
-                  }}
-                  className="rounded-xl px-3 py-2 text-xs bg-white/10 text-gray-100 border border-white/10 hover:bg-white/15 transition-colors"
-                >
-                  コピー
-                </button>
-              </div>
-            ) : null}
 
             <div className="mt-4 flex items-center justify-center gap-2">
               <button
@@ -308,7 +267,7 @@ export default function Wc2026CountryPage() {
                     : 'bg-transparent text-white/70 border-white/10 hover:bg-white/10'
                 }`}
               >
-                表
+                メンバー表
               </button>
               <button
                 type="button"
@@ -326,12 +285,6 @@ export default function Wc2026CountryPage() {
             {squadViewMode === 'pitch' ? (
               <Wc2026PitchSection
                 canEdit={canEdit}
-                countryNameJa={country.nameJa}
-                countrySlug={countrySlug}
-                pitchImageMode={pitchImageMode}
-                setPitchImageMode={setPitchImageMode}
-                pitchPngBusy={pitchPngBusy}
-                setPitchPngBusy={setPitchPngBusy}
                 pitchData={pitchData}
                 pitchSelectedSlot={pitchSelectedSlot}
                 setPitchSelectedSlot={setPitchSelectedSlot}
@@ -362,6 +315,102 @@ export default function Wc2026CountryPage() {
               />
               <div className="mt-1 text-[11px] text-white/60 text-right">{predictionComment.length}/500</div>
             </div>
+
+            <div className="mt-4">
+              <div className="flex items-center justify-center">
+                <button
+                  type="button"
+                  disabled={!canEdit || saving}
+                  onClick={save}
+                  className="rounded-2xl px-6 py-3 text-sm font-bold bg-sky-600 text-white border border-white/10 hover:bg-sky-500 transition-colors disabled:opacity-50"
+                >
+                  {saving ? '保存中...' : '保存'}
+                </button>
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  disabled={!canEdit || sharing}
+                  onClick={share}
+                  className="rounded-xl px-3 py-2 text-xs bg-black/70 text-white border border-white/10 hover:bg-black/80 transition-colors disabled:opacity-50"
+                >
+                  {sharing ? '作成中...' : '予想をシェア（Xで共有）'}
+                </button>
+                <button
+                  type="button"
+                  disabled={shareImageBusy}
+                  onClick={async () => {
+                    try {
+                      const el = document.getElementById('wc2026-pitch-ogp-capture');
+                      if (!el) return;
+                      setShareImageBusy(true);
+                      const dataUrl = await toPng(el, {
+                        cacheBust: true,
+                        pixelRatio: 2,
+                        width: 1200,
+                        height: 630,
+                        backgroundColor: '#020617',
+                        style: {
+                          opacity: '1',
+                          transform: 'none',
+                        },
+                        onClone: (doc: Document) => {
+                          try {
+                            const cloned = doc.getElementById('wc2026-pitch-ogp-capture') as HTMLElement | null;
+                            if (!cloned) return;
+                            cloned.style.opacity = '1';
+                            cloned.style.transform = 'none';
+                            cloned.style.left = '0px';
+                            cloned.style.top = '0px';
+                            cloned.style.zIndex = '0';
+                          } catch {
+                            // ignore
+                          }
+                        },
+                      } as any);
+                      const a = document.createElement('a');
+                      a.href = dataUrl;
+                      a.download = `wc2026-${countrySlug || 'squad'}-share.png`;
+                      a.click();
+                    } catch {
+                      // ignore
+                    } finally {
+                      setShareImageBusy(false);
+                    }
+                  }}
+                  className="rounded-xl px-3 py-2 text-xs bg-white/10 text-gray-100 border border-white/10 hover:bg-white/15 transition-colors disabled:opacity-50"
+                >
+                  {shareImageBusy ? '作成中...' : '画像を保存'}
+                </button>
+              </div>
+            </div>
+
+            {statusMessage ? (
+              <div className="mt-2 text-xs text-white/70 text-center">{statusMessage}</div>
+            ) : null}
+
+            {shareLink ? (
+              <div className="mt-3 flex items-center gap-2">
+                <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[11px] text-white/80 truncate">
+                  {shareLink}
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(shareLink);
+                      setStatusMessage('共有リンクをコピーしました');
+                    } catch {
+                      setStatusMessage('コピーできませんでした');
+                    }
+                  }}
+                  className="rounded-xl px-3 py-2 text-xs bg-white/10 text-gray-100 border border-white/10 hover:bg-white/15 transition-colors"
+                >
+                  コピー
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
 

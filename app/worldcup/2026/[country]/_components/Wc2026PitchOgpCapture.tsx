@@ -36,43 +36,56 @@ export function Wc2026PitchOgpCapture(props: {
           <div className="text-[11px] text-white/60">3-4-2-1</div>
         </div>
 
-        <div className="relative w-full bg-gradient-to-b from-emerald-700/40 to-emerald-900/40" style={{ height: 586 }}>
+        <div style={{ height: 586, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div
-            className="absolute inset-0 opacity-40"
+            className="relative bg-gradient-to-b from-emerald-700/40 to-emerald-900/40"
             style={{
-              backgroundImage:
-                'repeating-linear-gradient(0deg, rgba(255,255,255,0.0) 0px, rgba(255,255,255,0.0) 22px, rgba(0,0,0,0.14) 22px, rgba(0,0,0,0.14) 44px)',
+              width: 1200,
+              height: 586,
+              transform: 'scale(0.78)',
+              transformOrigin: 'center',
             }}
-          />
-          <div className="absolute inset-0">
-            <div className="absolute left-[8%] right-[8%] top-[6%] bottom-[6%] border border-white/35 rounded-sm" />
-            <div className="absolute left-[8%] right-[8%] top-1/2 -translate-y-1/2 border-t border-white/35" />
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[28%] aspect-square rounded-full border border-white/35" />
-            <div className="absolute left-[28%] right-[28%] bottom-[6%] h-[18%] border border-white/35" />
-            <div className="absolute left-[28%] right-[28%] top-[6%] h-[18%] border border-white/35" />
-          </div>
+          >
+            <div
+              className="absolute inset-0 opacity-40"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(0deg, rgba(255,255,255,0.0) 0px, rgba(255,255,255,0.0) 22px, rgba(0,0,0,0.14) 22px, rgba(0,0,0,0.14) 44px)',
+              }}
+            />
+            <div className="absolute inset-0">
+              <div className="absolute left-[8%] right-[8%] top-[6%] bottom-[6%] border border-white/35 rounded-sm" />
+              <div className="absolute left-[8%] right-[8%] top-1/2 -translate-y-1/2 border-t border-white/35" />
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[28%] aspect-square rounded-full border border-white/35" />
+              <div className="absolute left-[28%] right-[28%] bottom-[6%] h-[18%] border border-white/35" />
+              <div className="absolute left-[28%] right-[28%] top-[6%] h-[18%] border border-white/35" />
+            </div>
 
-          {FORMATION_3421_SLOTS.map((slot) => {
-            const p = pitchData.assigned[slot.key as any];
-            return (
-              <div
-                key={slot.key}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${slot.leftPct}%`, top: `${slot.topPct}%` }}
-              >
-                <div className="rounded-full text-white/90 whitespace-nowrap truncate border bg-black/55 border-white/10 px-2 py-0.5 text-[10px]" style={{ maxWidth: 420 }}>
-                  {p ? (
-                    <>
-                      <span className={statusMarkClassName(p.status)}>{statusMark(p.status)}</span>
-                      <span className="ml-1 font-semibold">{p.name}</span>
-                    </>
-                  ) : (
-                    <span className="text-white/60">{slot.label}</span>
-                  )}
+            {FORMATION_3421_SLOTS.map((slot) => {
+              const p = pitchData.assigned[slot.key as any];
+              return (
+                <div
+                  key={slot.key}
+                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${slot.leftPct}%`, top: `${slot.topPct}%` }}
+                >
+                  <div
+                    className="rounded-full text-white/90 whitespace-nowrap truncate border bg-black/55 border-white/10 px-3 py-1 text-[12px]"
+                    style={{ maxWidth: 520 }}
+                  >
+                    {p ? (
+                      <>
+                        <span className={statusMarkClassName(p.status)}>{statusMark(p.status)}</span>
+                        <span className="ml-1 font-semibold">{p.name}</span>
+                      </>
+                    ) : (
+                      <span className="text-white/60">{slot.label}</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

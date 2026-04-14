@@ -83,7 +83,6 @@ export function useWc2026PredictionDoc({ userUid, countrySlug }: UseWc2026Predic
       };
       if (trimmedComment) payload.comment = trimmedComment;
       await setDoc(docRef, payload, { merge: true });
-      setStatusMessage('保存しました');
     } catch (e: any) {
       const code = typeof e?.code === 'string' ? e.code : '';
       const msg = typeof e?.message === 'string' ? e.message : '';
