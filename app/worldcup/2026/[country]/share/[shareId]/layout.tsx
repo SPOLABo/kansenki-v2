@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props, parent: ResolvingMetad
 
   const fallbackTitle = country ? `${country.nameJa}：W杯2026 予想` : 'W杯2026 予想';
   const baseUrl = getBaseUrlFromHeaders();
-  const fixedImageUrl = `${baseUrl}/wc2026-japan-pitch.png`;
+  const fixedImageUrl = `${baseUrl}/${encodeURIComponent('wc2026-japan-pitch (1).png')}`;
 
   const db = getServerDb();
   if (!db) {

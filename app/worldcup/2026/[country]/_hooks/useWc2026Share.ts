@@ -58,7 +58,7 @@ export function useWc2026Share({
               opacity: '1',
               transform: 'none',
             },
-            onClone: (doc) => {
+            onClone: (doc: Document) => {
               try {
                 const cloned = doc.getElementById('wc2026-pitch-ogp-capture') as HTMLElement | null;
                 if (!cloned) return;
@@ -71,7 +71,7 @@ export function useWc2026Share({
                 // ignore
               }
             },
-          });
+          } as any);
           const objectRef = ref(storage, `wc2026PredictionShareOgp/${countrySlug}/${shareId}.png`);
           await uploadString(objectRef, dataUrl, 'data_url');
           ogImageUrl = await getDownloadURL(objectRef);
