@@ -1,15 +1,31 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 
 export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-8 w-full max-w-sm text-center">
+            <h1 className="text-2xl font-bold mb-4 dark:text-white">ログイン</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">読み込み中...</p>
+          </div>
+        </div>
+      }
+    >
+      <LoginPageInner />
+    </Suspense>
+  );
+}
+
+function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
