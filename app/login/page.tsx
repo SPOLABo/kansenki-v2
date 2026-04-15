@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -10,6 +11,7 @@ import { useState } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const provider = new GoogleAuthProvider();
@@ -50,7 +52,9 @@ export default function LoginPage() {
 
       if (user) {
         await createUserProfile(user);
-        router.push('/mypage');
+        const redirect = searchParams?.get('redirect') ?? '';
+        const nextPath = redirect.startsWith('/') ? redirect : '/mypage';
+        router.replace(nextPath);
       }
     } catch (error: any) {
       console.error('❌ ログインエラー:', error);

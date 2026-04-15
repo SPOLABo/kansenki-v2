@@ -317,73 +317,86 @@ export default function Wc2026CountryPage() {
             </div>
 
             <div className="mt-4">
-              <div className="flex items-center justify-center">
-                <button
-                  type="button"
-                  disabled={!canEdit || saving}
-                  onClick={save}
-                  className="rounded-2xl px-6 py-3 text-sm font-bold bg-sky-600 text-white border border-white/10 hover:bg-sky-500 transition-colors disabled:opacity-50"
-                >
-                  {saving ? '保存中...' : '保存'}
-                </button>
-              </div>
+              {!canEdit ? (
+                <div className="flex items-center justify-center">
+                  <Link
+                    href={`/login?redirect=${encodeURIComponent(`/worldcup/2026/${countrySlug}`)}`}
+                    className="rounded-2xl px-6 py-3 text-sm font-bold bg-orange-500 text-white border border-white/10 hover:bg-orange-400 transition-colors"
+                  >
+                    ログイン/新規登録
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-center">
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={save}
+                      className="rounded-2xl px-6 py-3 text-sm font-bold bg-sky-600 text-white border border-white/10 hover:bg-sky-500 transition-colors disabled:opacity-50"
+                    >
+                      {saving ? '保存中...' : '保存'}
+                    </button>
+                  </div>
 
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                <button
-                  type="button"
-                  disabled={!canEdit || sharing}
-                  onClick={share}
-                  className="rounded-xl px-3 py-2 text-xs bg-black/70 text-white border border-white/10 hover:bg-black/80 transition-colors disabled:opacity-50"
-                >
-                  {sharing ? '作成中...' : '予想をシェア（Xで共有）'}
-                </button>
-                <button
-                  type="button"
-                  disabled={shareImageBusy}
-                  onClick={async () => {
-                    try {
-                      const el = document.getElementById('wc2026-pitch-ogp-capture');
-                      if (!el) return;
-                      setShareImageBusy(true);
-                      const dataUrl = await toPng(el, {
-                        cacheBust: true,
-                        pixelRatio: 2,
-                        width: 1200,
-                        height: 630,
-                        backgroundColor: '#020617',
-                        style: {
-                          opacity: '1',
-                          transform: 'none',
-                        },
-                        onClone: (doc: Document) => {
-                          try {
-                            const cloned = doc.getElementById('wc2026-pitch-ogp-capture') as HTMLElement | null;
-                            if (!cloned) return;
-                            cloned.style.opacity = '1';
-                            cloned.style.transform = 'none';
-                            cloned.style.left = '0px';
-                            cloned.style.top = '0px';
-                            cloned.style.zIndex = '0';
-                          } catch {
-                            // ignore
-                          }
-                        },
-                      } as any);
-                      const a = document.createElement('a');
-                      a.href = dataUrl;
-                      a.download = `wc2026-${countrySlug || 'squad'}-share.png`;
-                      a.click();
-                    } catch {
-                      // ignore
-                    } finally {
-                      setShareImageBusy(false);
-                    }
-                  }}
-                  className="rounded-xl px-3 py-2 text-xs bg-white/10 text-gray-100 border border-white/10 hover:bg-white/15 transition-colors disabled:opacity-50"
-                >
-                  {shareImageBusy ? '作成中...' : '画像を保存'}
-                </button>
-              </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      disabled={sharing}
+                      onClick={share}
+                      className="rounded-xl px-3 py-2 text-xs bg-black/70 text-white border border-white/10 hover:bg-black/80 transition-colors disabled:opacity-50"
+                    >
+                      {sharing ? '作成中...' : '予想をシェア（Xで共有）'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={shareImageBusy}
+                      onClick={async () => {
+                        try {
+                          const el = document.getElementById('wc2026-pitch-ogp-capture');
+                          if (!el) return;
+                          setShareImageBusy(true);
+                          const dataUrl = await toPng(el, {
+                            cacheBust: true,
+                            pixelRatio: 2,
+                            width: 1200,
+                            height: 630,
+                            backgroundColor: '#020617',
+                            style: {
+                              opacity: '1',
+                              transform: 'none',
+                            },
+                            onClone: (doc: Document) => {
+                              try {
+                                const cloned = doc.getElementById('wc2026-pitch-ogp-capture') as HTMLElement | null;
+                                if (!cloned) return;
+                                cloned.style.opacity = '1';
+                                cloned.style.transform = 'none';
+                                cloned.style.left = '0px';
+                                cloned.style.top = '0px';
+                                cloned.style.zIndex = '0';
+                              } catch {
+                                // ignore
+                              }
+                            },
+                          } as any);
+                          const a = document.createElement('a');
+                          a.href = dataUrl;
+                          a.download = `wc2026-${countrySlug || 'squad'}-share.png`;
+                          a.click();
+                        } catch {
+                          // ignore
+                        } finally {
+                          setShareImageBusy(false);
+                        }
+                      }}
+                      className="rounded-xl px-3 py-2 text-xs bg-white/10 text-gray-100 border border-white/10 hover:bg-white/15 transition-colors disabled:opacity-50"
+                    >
+                      {shareImageBusy ? '作成中...' : '画像を保存'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             {statusMessage ? (
