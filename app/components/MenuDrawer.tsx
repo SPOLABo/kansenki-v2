@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 
 // 型定義を明確化
@@ -79,6 +80,8 @@ export default function MenuDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   useTheme();
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const pathname = usePathname();
+  const isWc2026 = pathname === '/worldcup/2026';
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const handleSectionClick = (section: string) => {
@@ -88,49 +91,58 @@ export default function MenuDrawer() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 h-16 bg-${
-          window.location.pathname === '/worldcup/2026' ? 'black' : 'white'
-        } dark:bg-${
-          window.location.pathname === '/worldcup/2026' ? 'black' : 'black'
-        } flex items-center justify-center px-4 border-b border-${
-          window.location.pathname === '/worldcup/2026' ? 'white/10' : 'gray-200'
-        } dark:border-${
-          window.location.pathname === '/worldcup/2026' ? 'white/10' : 'gray-700'
-        }`}
+        className={
+          `fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-center px-4 border-b ` +
+          (isWc2026 ? 'bg-black border-white/10' : 'bg-white dark:bg-black border-gray-200 dark:border-gray-800')
+        }
       >
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <Link href="/" className="cursor-pointer">
-            <Image
-              src={
-                window.location.pathname === '/worldcup/2026'
-                  ? '/スポカレロゴ.png'
-                  : '/footballtop-logo-12.png'
-              }
-              alt={
-                window.location.pathname === '/worldcup/2026'
-                  ? 'スポカレ'
-                  : 'Football Top Logo'
-              }
-              width={140}
-              height={40}
-              priority
-              style={{ height: 'auto' }}
-              sizes="140px"
-            />
+            {isWc2026 ? (
+              <Image
+                src="/スポカレロゴ.png"
+                alt="スポカレ"
+                width={140}
+                height={40}
+                priority
+                style={{ height: 'auto' }}
+                sizes="140px"
+              />
+            ) : (
+              <>
+                <div className="dark:hidden">
+                  <Image
+                    src="/footballtop-logo-12.png"
+                    alt="Football Top Logo"
+                    width={140}
+                    height={40}
+                    priority
+                    style={{ height: 'auto' }}
+                    sizes="140px"
+                  />
+                </div>
+                <div className="hidden dark:block">
+                  <Image
+                    src="/footballtop-logo-13.png"
+                    alt="Football Top Logo"
+                    width={140}
+                    height={40}
+                    priority
+                    style={{ height: 'auto' }}
+                    sizes="140px"
+                  />
+                </div>
+              </>
+            )}
           </Link>
         </div>
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
           <button onClick={toggleMenu} className="focus:outline-none">
             <svg
-              className={`w-6 h-6 text-${
-                window.location.pathname === '/worldcup/2026'
-                  ? 'white/90'
-                  : 'gray-700'
-              } dark:text-${
-                window.location.pathname === '/worldcup/2026'
-                  ? 'white/90'
-                  : 'gray-300'
-              }`}
+              className={
+                `w-6 h-6 ` +
+                (isWc2026 ? 'text-white/90' : 'text-gray-700 dark:text-gray-300')
+              }
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
