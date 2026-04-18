@@ -32,8 +32,8 @@ export function Wc2026PitchOgpCapture(props: {
         style={{ width: 1200, height: 630 }}
       >
         <div className="px-4 pt-3 pb-2 flex items-center justify-between" style={{ height: 44 }}>
-          <div className="text-[12px] font-semibold text-white/85 truncate">{countryNameJa}：W杯 2026 予想</div>
-          <div className="text-[11px] text-white/60">3-4-2-1</div>
+          <div className="text-[14px] font-semibold text-white/85 truncate">{countryNameJa}：W杯 2026 予想</div>
+          <div className="text-[13px] text-white/60">3-4-2-1</div>
         </div>
 
         <div style={{ height: 586, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -42,7 +42,7 @@ export function Wc2026PitchOgpCapture(props: {
             style={{
               width: 1200,
               height: 586,
-              transform: 'scale(0.78)',
+              transform: 'scale(0.9)',
               transformOrigin: 'center',
             }}
           >
@@ -70,7 +70,7 @@ export function Wc2026PitchOgpCapture(props: {
                   style={{ left: `${slot.leftPct}%`, top: `${slot.topPct}%` }}
                 >
                   <div
-                    className="rounded-full text-white/90 whitespace-nowrap truncate border bg-black/55 border-white/10 px-3 py-1 text-[12px]"
+                    className="rounded-full text-white/90 whitespace-nowrap truncate border bg-black/55 border-white/10 px-4 py-2 text-[16px]"
                     style={{ maxWidth: 520 }}
                   >
                     {p ? (
