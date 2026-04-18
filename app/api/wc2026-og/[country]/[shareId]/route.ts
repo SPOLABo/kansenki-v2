@@ -377,7 +377,6 @@ export async function GET(_req: Request, context: Context) {
               'div',
               { style: { display: 'flex', flexDirection: 'column' } },
               React.createElement('div', { style: { fontSize: 44, fontWeight: 800, letterSpacing: -0.5 } }, title),
-              React.createElement('div', { style: { marginTop: 8, fontSize: 22, opacity: 0.85 } }, 'Pitch (3-4-2-1)'),
               React.createElement('div', { style: { marginTop: 6, fontSize: 18, opacity: 0.65 } }, sub)
             ),
             React.createElement(

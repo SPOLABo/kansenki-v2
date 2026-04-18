@@ -76,12 +76,23 @@ const menuConfig: MenuSection[] = [
   },
 ];
 
+const wc2026MenuConfig: MenuSection[] = [
+  {
+    title: 'マイページ',
+    items: [],
+    isSingleLink: true,
+    href: '/mypage',
+  },
+];
+
 export default function MenuDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   useTheme();
   const [openSection, setOpenSection] = useState<string | null>(null);
   const pathname = usePathname();
   const isWc2026 = pathname === '/worldcup/2026';
+  const isWc2026Path = pathname.startsWith('/worldcup/2026');
+  const activeMenuConfig = isWc2026Path ? wc2026MenuConfig : menuConfig;
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const handleSectionClick = (section: string) => {
@@ -190,7 +201,7 @@ export default function MenuDrawer() {
           </div>
 
           <div className="p-6 space-y-4">
-            {menuConfig.map((section) => (
+            {activeMenuConfig.map((section) => (
               <div key={section.title} className="border-b border-gray-200 dark:border-gray-700">
                 {section.isSingleLink ? (
                   <Link href={section.href!} onClick={toggleMenu} className="block w-full px-4 py-3 text-left text-base font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none transition-colors duration-200 rounded-md">

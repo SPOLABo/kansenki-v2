@@ -162,8 +162,8 @@ export default async function Wc2026SharePage({ params }: Props) {
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-indigo-950">
       <div className="px-3 pt-4 pb-24">
         <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#0b1533]/90 to-[#070d1f]/90 overflow-hidden">
-          <div className="p-4">
-            <div className="flex items-center justify-between gap-3">
+          <div className="relative rounded-3xl border border-white/10 bg-black/20 px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 {countrySlug === 'japan' ? (
                   <div className="flex items-baseline gap-2 min-w-0">
@@ -172,16 +172,10 @@ export default async function Wc2026SharePage({ params }: Props) {
                   </div>
                 ) : (
                   <div className="text-xl font-black italic tracking-wide text-white">
-                    {country?.nameEn?.toUpperCase() ?? 'SQUAD'}
+                    {country?.nameJa ?? 'W杯2026 予想'}
                   </div>
                 )}
               </div>
-              <a
-                href={`${baseUrl}/api/wc2026-og/${countrySlug}/${shareId}?v=${shareId}`}
-                className="text-[11px] text-white/70 underline shrink-0"
-              >
-                画像
-              </a>
             </div>
 
             <SharePitch pitchAssigned={pitchAssigned} statusMark={statusMark} statusMarkClassName={statusMarkClassName} />
