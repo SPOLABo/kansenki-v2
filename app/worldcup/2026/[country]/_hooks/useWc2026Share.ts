@@ -110,7 +110,7 @@ export function useWc2026Share({
       const url = `${origin}/worldcup/2026/${countrySlug}/share/${shareId}`;
       const title = `${countryNameJa}：W杯2026 予想`;
       const text = encodeURIComponent(title);
-      const hashtags = encodeURIComponent('みんなの現地観戦記,footballtop');
+      const hashtags = encodeURIComponent('SAMURAIBLUE,ワールドカップ,W杯2026,スポカレ,代表メンバー予想');
       const shareUrl = `https://x.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}&hashtags=${hashtags}`;
 
       if (canNativeShare) {

@@ -28,15 +28,15 @@ export async function generateMetadata({ params }: Props, parent: ResolvingMetad
 
   const fallbackTitle = country ? `${country.nameJa}：W杯2026 予想` : 'W杯2026 予想';
   const baseUrl = getBaseUrlFromHeaders();
-  const fixedImageUrl = `${baseUrl}/${encodeURIComponent('wc2026-japan-pitch (1).png')}`;
+  const ogApiImageUrl = `${baseUrl}/api/wc2026-og/${encodeURIComponent(countrySlug)}/${encodeURIComponent(shareId)}`;
 
   const db = getServerDb();
   if (!db) {
     const pageUrl = `${baseUrl}/worldcup/2026/${countrySlug}/share/${shareId}`;
     return {
       title: fallbackTitle,
-      openGraph: { title: fallbackTitle, images: [{ url: fixedImageUrl, width: 1200, height: 630 }], url: pageUrl },
-      twitter: { card: 'summary_large_image', title: fallbackTitle, images: [fixedImageUrl] },
+      openGraph: { title: fallbackTitle, images: [{ url: ogApiImageUrl, width: 1200, height: 630 }], url: pageUrl },
+      twitter: { card: 'summary_large_image', title: fallbackTitle, images: [ogApiImageUrl] },
     };
   }
 
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: Props, parent: ResolvingMetad
     const pageUrl = `${baseUrl}/worldcup/2026/${countrySlug}/share/${shareId}`;
     const data = snap.data() as any;
     const storedOg = typeof data?.ogImageUrl === 'string' && data.ogImageUrl.trim() ? data.ogImageUrl.trim() : null;
-    const imageUrl = fixedImageUrl;
+    const imageUrl = storedOg ?? ogApiImageUrl;
 
     return {
       title,
