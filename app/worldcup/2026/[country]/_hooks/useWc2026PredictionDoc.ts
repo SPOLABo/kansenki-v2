@@ -28,6 +28,11 @@ export function useWc2026PredictionDoc({ userUid, countrySlug }: UseWc2026Predic
     return doc(db, 'users', userUid, 'wc2026SquadPredictions', countrySlug);
   }, [countrySlug, userUid]);
 
+  const publicDocRef = useMemo(() => {
+    if (!userUid || !countrySlug) return null;
+    return doc(db, 'wc2026PublicSquadPredictions', `${countrySlug}_${userUid}`);
+  }, [countrySlug, userUid]);
+
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -83,6 +88,20 @@ export function useWc2026PredictionDoc({ userUid, countrySlug }: UseWc2026Predic
       };
       if (trimmedComment) payload.comment = trimmedComment;
       await setDoc(docRef, payload, { merge: true });
+
+      if (publicDocRef) {
+        await setDoc(
+          publicDocRef,
+          {
+            schemaVersion: 1,
+            countrySlug,
+            tournamentId: 'wc2026',
+            players: sanitizedPlayers,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
     } catch (e: any) {
       const code = typeof e?.code === 'string' ? e.code : '';
       const msg = typeof e?.message === 'string' ? e.message : '';

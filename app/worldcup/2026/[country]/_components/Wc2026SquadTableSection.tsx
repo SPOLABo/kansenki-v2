@@ -20,7 +20,7 @@ export function Wc2026SquadTableSection(props: {
   const { squadRows, openSquadSectionByKey, setOpenSquadSectionByKey, candidates, statusMark, statusMarkClassName } = props;
 
   return (
-    <div className="mt-4 space-y-5">
+    <div id="wc2026-squad-table-capture" className="mt-4 space-y-5">
       {squadRows.map((row) => (
         <div key={row.key}>
           <button
@@ -34,9 +34,6 @@ export function Wc2026SquadTableSection(props: {
             <div className="text-xs font-bold tracking-[0.3em] text-yellow-200/90">
               {row.title}
               <span className="ml-2 text-[10px] tracking-normal text-white/70">({row.players.length})</span>
-              <span className="ml-2 text-[10px] tracking-normal text-white/60">
-                {openSquadSectionByKey[row.key] ?? true ? '閉じる' : '開く'}
-              </span>
             </div>
           </button>
 

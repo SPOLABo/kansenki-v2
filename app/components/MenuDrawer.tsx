@@ -87,32 +87,92 @@ export default function MenuDrawer() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white dark:bg-black flex items-center justify-center px-4 border-b dark:border-gray-800">
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 h-16 bg-${
+          window.location.pathname === '/worldcup/2026' ? 'black' : 'white'
+        } dark:bg-${
+          window.location.pathname === '/worldcup/2026' ? 'black' : 'black'
+        } flex items-center justify-center px-4 border-b border-${
+          window.location.pathname === '/worldcup/2026' ? 'white/10' : 'gray-200'
+        } dark:border-${
+          window.location.pathname === '/worldcup/2026' ? 'white/10' : 'gray-700'
+        }`}
+      >
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <Link href="/" className="cursor-pointer">
-            <div className="dark:hidden">
-              <Image src="/footballtop-logo-12.png" alt="Football Top Logo" width={140} height={40} priority style={{ height: 'auto' }} sizes="140px" />
-            </div>
-            <div className="hidden dark:block">
-              <Image src="/footballtop-logo-13.png" alt="Football Top Logo" width={140} height={40} priority style={{ height: 'auto' }} sizes="140px" />
-            </div>
+            <Image
+              src={
+                window.location.pathname === '/worldcup/2026'
+                  ? '/スポカレロゴ.png'
+                  : '/footballtop-logo-12.png'
+              }
+              alt={
+                window.location.pathname === '/worldcup/2026'
+                  ? 'スポカレ'
+                  : 'Football Top Logo'
+              }
+              width={140}
+              height={40}
+              priority
+              style={{ height: 'auto' }}
+              sizes="140px"
+            />
           </Link>
         </div>
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
           <button onClick={toggleMenu} className="focus:outline-none">
-            <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            <svg
+              className={`w-6 h-6 text-${
+                window.location.pathname === '/worldcup/2026'
+                  ? 'white/90'
+                  : 'gray-700'
+              } dark:text-${
+                window.location.pathname === '/worldcup/2026'
+                  ? 'white/90'
+                  : 'gray-300'
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 6h16M4 12h16m-7 6h7"
+              />
+            </svg>
           </button>
         </div>
       </header>
 
       {isOpen && <div className="fixed inset-0 z-[9999]" onClick={toggleMenu} />}
 
-      <aside className={`fixed top-0 right-0 w-[70vw] h-screen z-[10000] bg-white dark:bg-gray-900 transition-transform duration-300 ease-in-out transform ${isOpen ? 'translate-x-0' : 'translate-x-full'} ${!isOpen ? 'invisible' : ''}`}>
+      <aside
+        className={`fixed top-0 right-0 w-[70vw] h-screen z-[10000] bg-white dark:bg-gray-900 transition-transform duration-300 ease-in-out transform ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        } ${!isOpen ? 'invisible' : ''}`}
+      >
         <div className="h-full overflow-y-auto pb-8 text-black dark:text-white font-sans">
           <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end">
-            <button onClick={toggleMenu} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors duration-200 focus:outline-none" aria-label="メニューを閉じる">
-              <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            <button
+              onClick={toggleMenu}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors duration-200 focus:outline-none"
+              aria-label="メニューを閉じる"
+            >
+              <svg
+                className="w-6 h-6 text-gray-700 dark:text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>

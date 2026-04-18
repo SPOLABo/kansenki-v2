@@ -6,6 +6,7 @@ import { getDownloadURL, ref, uploadString } from 'firebase/storage';
 import { toPng } from 'html-to-image';
 import { db, storage } from '@/lib/firebase';
 import type { SquadPlayerPrediction } from '@/types/worldcup';
+import type { FormationSlotKey } from '../wc2026PredictionUtils';
 import { randomId, sanitizePlayersForFirestore } from '../wc2026PredictionUtils';
 
 type UseWc2026ShareArgs = {
@@ -13,6 +14,7 @@ type UseWc2026ShareArgs = {
   countrySlug: string;
   countryNameJa: string;
   players: SquadPlayerPrediction[];
+  pitchOverrideBySlot: Partial<Record<FormationSlotKey, string>>;
   predictionComment: string;
   setStatusMessage: (v: string | null) => void;
 };
@@ -22,6 +24,7 @@ export function useWc2026Share({
   countrySlug,
   countryNameJa,
   players,
+  pitchOverrideBySlot,
   predictionComment,
   setStatusMessage,
 }: UseWc2026ShareArgs) {
@@ -33,7 +36,7 @@ export function useWc2026Share({
     setShareLink(null);
 
     const canNativeShare = typeof navigator !== 'undefined' && 'share' in navigator;
-    const popup = canNativeShare ? null : window.open('about:blank', '_blank', 'noopener,noreferrer');
+    const popup = canNativeShare ? null : window.open('about:blank', '_blank');
 
     setSharing(true);
     setStatusMessage(null);
@@ -42,10 +45,18 @@ export function useWc2026Share({
       const shareRef = doc(db, 'wc2026PredictionShares', shareId);
       const trimmedComment = predictionComment.trim().slice(0, 500);
       const sanitizedPlayers = sanitizePlayersForFirestore(players);
-      const snapshotJson = JSON.stringify({ countrySlug, players: sanitizedPlayers, comment: trimmedComment || undefined });
+      const snapshotJson = JSON.stringify({
+        countrySlug,
+        players: sanitizedPlayers,
+        pitchOverrideBySlot,
+        formation: '3-4-2-1',
+        comment: trimmedComment || undefined,
+      });
 
       let ogImageUrl: string | undefined;
       try {
+        const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+        if (isLocalhost) throw new Error('skip_og_upload_on_localhost');
         const el = document.getElementById('wc2026-pitch-ogp-capture');
         if (el) {
           const dataUrl = await toPng(el, {
@@ -88,6 +99,7 @@ export function useWc2026Share({
           countrySlug,
           snapshotJson,
           ogImageUrl: ogImageUrl || null,
+          commentCount: 0,
           createdByUid: userUid,
           createdAt: serverTimestamp(),
         },
@@ -113,12 +125,18 @@ export function useWc2026Share({
       if (popup) {
         popup.location.href = shareUrl;
       } else {
+        const opened = window.open(shareUrl, '_blank');
+        if (!opened) {
+          window.location.href = shareUrl;
+        }
         setShareLink(url);
-        setStatusMessage('共有リンクをコピーしてXで貼り付けてください');
+        setStatusMessage('Xの画面が開かない場合は、共有リンクをコピーして貼り付けてください');
       }
-    } catch {
+    } catch (e: any) {
       if (popup) popup.close();
-      setStatusMessage('共有リンクの作成に失敗しました');
+      const code = typeof e?.code === 'string' ? e.code : '';
+      const msg = typeof e?.message === 'string' ? e.message : '';
+      setStatusMessage(`共有リンクの作成に失敗しました${code || msg ? `：${code || msg}` : ''}`);
     } finally {
       setSharing(false);
     }

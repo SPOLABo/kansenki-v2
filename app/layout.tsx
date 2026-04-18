@@ -1,6 +1,5 @@
 import './globals.css';
-import MenuDrawer from './components/MenuDrawer';
-import HomeOnlyBottomTabBar from './components/HomeOnlyBottomTabBar';
+import LayoutChrome from './components/LayoutChrome';
 import { Analytics } from '@vercel/analytics/react';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -22,14 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           <AuthProvider>
             <LoadingAnimationWrapper>
-              <div className="relative min-h-screen">
-                <MenuDrawer />
-                <main className="pt-16 pb-24">
-                  {children}
-                </main>
-                <HomeOnlyBottomTabBar />
+              <LayoutChrome>
+                {children}
                 <Analytics />
-              </div>
+              </LayoutChrome>
             </LoadingAnimationWrapper>
           </AuthProvider>
         </ThemeProvider>

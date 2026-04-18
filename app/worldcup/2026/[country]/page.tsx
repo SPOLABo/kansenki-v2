@@ -42,11 +42,15 @@ export default function Wc2026CountryPage() {
     setStatusMessage,
   } = useWc2026PredictionDoc({ userUid: user?.uid ?? null, countrySlug });
 
+  const [pitchSelectedSlot, setPitchSelectedSlot] = useState<FormationSlotKey | null>(null);
+  const [pitchOverrideBySlot, setPitchOverrideBySlot] = useState<Partial<Record<FormationSlotKey, string>>>({});
+
   const { sharing, share, shareLink } = useWc2026Share({
     userUid: user?.uid ?? null,
     countrySlug,
     countryNameJa: country?.nameJa ?? '',
     players,
+    pitchOverrideBySlot,
     predictionComment,
     setStatusMessage,
   });
@@ -55,22 +59,12 @@ export default function Wc2026CountryPage() {
 
   const [squadViewMode, setSquadViewMode] = useState<'list' | 'pitch'>('list');
 
-  const [pitchSelectedSlot, setPitchSelectedSlot] = useState<FormationSlotKey | null>(null);
-  const [pitchOverrideBySlot, setPitchOverrideBySlot] = useState<Partial<Record<FormationSlotKey, string>>>({});
-
   const [openSquadSectionByKey, setOpenSquadSectionByKey] = useState<Record<string, boolean>>({
     GK: true,
     DF: true,
     MF: true,
     FW: true,
     MFFW: true,
-  });
-
-  const [openCandidateSectionByPos, setOpenCandidateSectionByPos] = useState<Record<SquadPosition, boolean>>({
-    GK: true,
-    DF: true,
-    MF: true,
-    FW: true,
   });
 
   const [candidateStatusById, setCandidateStatusById] = useState<Record<string, PickStatus>>({});
@@ -230,14 +224,16 @@ export default function Wc2026CountryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-blue-950 to-indigo-950">
       <div className="px-3 pt-4 pb-24">
-        <div className="px-1 pb-3 flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-bold text-white">{country.nameJa}：W杯 2026 予想</h1>
-            <div className="mt-1 text-xs text-white/60">選出：{pickedCount}人（当確◎：{sureCount}）</div>
+        <div className="sticky top-0 z-40 -mx-3 px-3 py-3 bg-slate-950/80 backdrop-blur border-b border-white/10">
+          <div className="relative flex items-center justify-center">
+            <Link href="/worldcup/2026" className="absolute left-0 text-sm font-bold text-white/90 hover:text-white">
+              ← 戻る
+            </Link>
+            <div className="text-sm font-bold text-white text-center">
+              {countrySlug === 'japan' ? '日本代表メンバー予想' : `${country.nameJa}代表メンバー予想`}
+            </div>
           </div>
-          <Link href="/worldcup/2026" className="text-xs text-white/70 underline shrink-0">
-            国一覧
-          </Link>
+          <div className="mt-1 text-xs text-white/60 text-center">選出：{pickedCount}人（当確◎：{sureCount}）</div>
         </div>
 
         {!loading && !user ? (
@@ -246,6 +242,31 @@ export default function Wc2026CountryPage() {
           </div>
         ) : null}
 
+        <div className="mb-3 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSquadViewMode('list')}
+            className={`rounded-full px-3 py-1 text-xs border transition-colors ${
+              squadViewMode === 'list'
+                ? 'bg-white/15 text-white border-white/20'
+                : 'bg-transparent text-white/70 border-white/10 hover:bg-white/10'
+            }`}
+          >
+            メンバー表
+          </button>
+          <button
+            type="button"
+            onClick={() => setSquadViewMode('pitch')}
+            className={`rounded-full px-3 py-1 text-xs border transition-colors ${
+              squadViewMode === 'pitch'
+                ? 'bg-white/15 text-white border-white/20'
+                : 'bg-transparent text-white/70 border-white/10 hover:bg-white/10'
+            }`}
+          >
+            ピッチ（3-4-2-1）
+          </button>
+        </div>
+
         <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-[#0b1533]/90 to-[#070d1f]/90 overflow-hidden mb-4">
           <div className="p-4">
             <div className="flex items-center justify-between gap-3">
@@ -253,33 +274,7 @@ export default function Wc2026CountryPage() {
                 <div className="text-xl font-black italic tracking-wide text-white">
                   {countrySlug === 'japan' ? 'SAMURAI BLUE' : `${country.nameEn.toUpperCase()} SQUAD`}
                 </div>
-                <div className="mt-1 text-xs text-white/70">FIFA ワールドカップ 2026 予想メンバー（自分）</div>
               </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSquadViewMode('list')}
-                className={`rounded-full px-3 py-1 text-xs border transition-colors ${
-                  squadViewMode === 'list'
-                    ? 'bg-white/15 text-white border-white/20'
-                    : 'bg-transparent text-white/70 border-white/10 hover:bg-white/10'
-                }`}
-              >
-                メンバー表
-              </button>
-              <button
-                type="button"
-                onClick={() => setSquadViewMode('pitch')}
-                className={`rounded-full px-3 py-1 text-xs border transition-colors ${
-                  squadViewMode === 'pitch'
-                    ? 'bg-white/15 text-white border-white/20'
-                    : 'bg-transparent text-white/70 border-white/10 hover:bg-white/10'
-                }`}
-              >
-                ピッチ（3-4-2-1）
-              </button>
             </div>
 
             {squadViewMode === 'pitch' ? (
@@ -304,7 +299,7 @@ export default function Wc2026CountryPage() {
             )}
 
             <div className="mt-5">
-              <div className="text-xs text-white/70">コメント（最大500文字）</div>
+              <div className="text-xs text-white/70">コメント</div>
               <textarea
                 value={predictionComment}
                 maxLength={500}
@@ -353,14 +348,23 @@ export default function Wc2026CountryPage() {
                       disabled={shareImageBusy}
                       onClick={async () => {
                         try {
-                          const el = document.getElementById('wc2026-pitch-ogp-capture');
+                          const el = document.getElementById(
+                            squadViewMode === 'pitch' ? 'wc2026-pitch-ogp-capture' : 'wc2026-squad-table-capture'
+                          );
                           if (!el) return;
                           setShareImageBusy(true);
+
+                          const rect = el.getBoundingClientRect();
+                          const width = Math.max(1, Math.ceil(rect.width));
+                          const height = Math.max(
+                            1,
+                            Math.ceil((el as HTMLElement).scrollHeight || rect.height || 1)
+                          );
                           const dataUrl = await toPng(el, {
                             cacheBust: true,
                             pixelRatio: 2,
-                            width: 1200,
-                            height: 630,
+                            width: squadViewMode === 'pitch' ? 1200 : width,
+                            height: squadViewMode === 'pitch' ? 630 : height,
                             backgroundColor: '#020617',
                             style: {
                               opacity: '1',
@@ -368,13 +372,16 @@ export default function Wc2026CountryPage() {
                             },
                             onClone: (doc: Document) => {
                               try {
-                                const cloned = doc.getElementById('wc2026-pitch-ogp-capture') as HTMLElement | null;
+                                const cloned = doc.getElementById(
+                                  squadViewMode === 'pitch' ? 'wc2026-pitch-ogp-capture' : 'wc2026-squad-table-capture'
+                                ) as HTMLElement | null;
                                 if (!cloned) return;
                                 cloned.style.opacity = '1';
                                 cloned.style.transform = 'none';
                                 cloned.style.left = '0px';
                                 cloned.style.top = '0px';
                                 cloned.style.zIndex = '0';
+                                cloned.style.overflow = 'visible';
                               } catch {
                                 // ignore
                               }
@@ -382,7 +389,7 @@ export default function Wc2026CountryPage() {
                           } as any);
                           const a = document.createElement('a');
                           a.href = dataUrl;
-                          a.download = `wc2026-${countrySlug || 'squad'}-share.png`;
+                          a.download = `wc2026-${countrySlug || 'squad'}-${squadViewMode === 'pitch' ? 'pitch' : 'table'}.png`;
                           a.click();
                         } catch {
                           // ignore
@@ -431,8 +438,6 @@ export default function Wc2026CountryPage() {
           candidates={candidates as any}
           candidatesByPos={candidatesByPos as any}
           canEdit={canEdit}
-          openCandidateSectionByPos={openCandidateSectionByPos}
-          setOpenCandidateSectionByPos={setOpenCandidateSectionByPos}
           players={players}
           candidateStatusById={candidateStatusById}
           setCandidateStatusById={setCandidateStatusById}
