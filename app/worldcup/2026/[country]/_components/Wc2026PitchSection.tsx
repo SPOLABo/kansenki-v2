@@ -66,7 +66,55 @@ export function Wc2026PitchSection(props: {
                     type="button"
                     disabled={!canEdit}
                     onClick={() => {
-                      setPitchSelectedSlot((prev) => (prev === slot.key ? null : slot.key));
+                      if (!canEdit) return;
+                      if (!pitchSelectedSlot) {
+                        setPitchSelectedSlot(slot.key);
+                        return;
+                      }
+                      if (pitchSelectedSlot === slot.key) {
+                        setPitchSelectedSlot(null);
+                        return;
+                      }
+
+                      const from = pitchSelectedSlot;
+                      const to = slot.key;
+                      const fromP = pitchData.assigned[from];
+                      const toP = pitchData.assigned[to];
+
+                      if (!fromP && !toP) {
+                        setPitchSelectedSlot(to);
+                        return;
+                      }
+
+                      setPitchOverrideBySlot((prevOverride) => {
+                        const next: Partial<Record<FormationSlotKey, string>> = { ...prevOverride };
+
+                        const fromId = fromP?.id ?? null;
+                        const toId = toP?.id ?? null;
+
+                        if (fromId && toId) {
+                          next[from] = toId;
+                          next[to] = fromId;
+                        } else if (fromId && !toId) {
+                          next[to] = fromId;
+                          delete next[from];
+                        } else if (!fromId && toId) {
+                          next[from] = toId;
+                          delete next[to];
+                        }
+
+                        const usedIds = new Set<string>();
+                        for (const k of Object.keys(next) as FormationSlotKey[]) {
+                          const v = next[k];
+                          if (!v) continue;
+                          if (usedIds.has(v)) delete next[k];
+                          else usedIds.add(v);
+                        }
+
+                        return next;
+                      });
+
+                      setPitchSelectedSlot(null);
                     }}
                     className={`rounded-full text-white/90 whitespace-nowrap truncate border transition-colors ${
                       selected ? 'bg-white/20 border-white/30' : 'bg-black/55 border-white/10 hover:bg-black/65'

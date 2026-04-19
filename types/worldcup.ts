@@ -17,6 +17,8 @@ export type SquadPredictionDoc = {
   countrySlug: string;
   tournamentId: 'wc2026';
   players: SquadPlayerPrediction[];
+  formation?: string;
+  pitchOverrideBySlot?: Record<string, string>;
   comment?: string;
   updatedAt?: any;
 };

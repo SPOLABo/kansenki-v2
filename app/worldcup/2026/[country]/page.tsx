@@ -36,6 +36,8 @@ export default function Wc2026CountryPage() {
     setPlayers,
     predictionComment,
     setPredictionComment,
+    pitchOverrideBySlot,
+    setPitchOverrideBySlot,
     saving,
     save,
     statusMessage,
@@ -43,7 +45,6 @@ export default function Wc2026CountryPage() {
   } = useWc2026PredictionDoc({ userUid: user?.uid ?? null, countrySlug });
 
   const [pitchSelectedSlot, setPitchSelectedSlot] = useState<FormationSlotKey | null>(null);
-  const [pitchOverrideBySlot, setPitchOverrideBySlot] = useState<Partial<Record<FormationSlotKey, string>>>({});
 
   const { sharing, share, shareLink } = useWc2026Share({
     userUid: user?.uid ?? null,
