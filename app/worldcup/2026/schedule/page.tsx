@@ -103,6 +103,13 @@ const SEED_SCHEDULE: SeedScheduleItem[] = [
     awayTeam: 'QAT',
   },
   {
+    id: 'B_20260619_0400_SUI_BIH',
+    kickoffAtLocalIso: '2026-06-19T04:00:00',
+    stage: 'グループB',
+    homeTeam: 'SUI',
+    awayTeam: 'BIH',
+  },
+  {
     id: 'B_20260625_0400_SUI_CAN',
     kickoffAtLocalIso: '2026-06-25T04:00:00',
     stage: 'グループB',
@@ -462,11 +469,11 @@ const SEED_SCHEDULE: SeedScheduleItem[] = [
   },
 
   {
-    id: 'K_20260618_0200_POR_NCLJAMCOD',
+    id: 'K_20260618_0200_POR_COD',
     kickoffAtLocalIso: '2026-06-18T02:00:00',
     stage: 'グループK',
     homeTeam: 'POR',
-    awayTeam: 'NCL/JAM/COD',
+    awayTeam: 'COD',
   },
   {
     id: 'K_20260618_1100_UZB_COL',
@@ -483,11 +490,11 @@ const SEED_SCHEDULE: SeedScheduleItem[] = [
     awayTeam: 'UZB',
   },
   {
-    id: 'K_20260624_1100_COL_NCLJAMCOD',
+    id: 'K_20260624_1100_COL_COD',
     kickoffAtLocalIso: '2026-06-24T11:00:00',
     stage: 'グループK',
     homeTeam: 'COL',
-    awayTeam: 'NCL/JAM/COD',
+    awayTeam: 'COD',
   },
   {
     id: 'K_20260628_0830_COL_POR',
@@ -497,10 +504,10 @@ const SEED_SCHEDULE: SeedScheduleItem[] = [
     awayTeam: 'POR',
   },
   {
-    id: 'K_20260628_0830_NCLJAMCOD_UZB',
+    id: 'K_20260628_0830_COD_UZB',
     kickoffAtLocalIso: '2026-06-28T08:30:00',
     stage: 'グループK',
-    homeTeam: 'NCL/JAM/COD',
+    homeTeam: 'COD',
     awayTeam: 'UZB',
   },
 
@@ -588,9 +595,11 @@ const FLAG_CODE_BY_TEAM_NAME: Record<string, string> = {
 };
 
 const FLAG_FILE_CODE_ALIAS: Record<string, string> = {
-  TUR: 'TRU',
-  IRQ: 'IRA',
+  TRU: 'TUR',
+  IRA: 'IRQ',
 };
+
+const FLAG_DIR = '国旗更新';
 
 function getFlagSrc(team: string) {
   const raw = (team ?? '').trim();
@@ -598,12 +607,12 @@ function getFlagSrc(team: string) {
   const upper = raw.toUpperCase();
   if (/^[A-Z]{3}$/.test(upper)) {
     const fileCode = FLAG_FILE_CODE_ALIAS[upper] ?? upper;
-    return `/国旗更新/${fileCode}.png`;
+    return `/${encodeURIComponent(FLAG_DIR)}/${fileCode}.png`;
   }
   const code = FLAG_CODE_BY_TEAM_NAME[raw];
   if (!code) return null;
   const fileCode = FLAG_FILE_CODE_ALIAS[code] ?? code;
-  return `/国旗更新/${fileCode}.png`;
+  return `/${encodeURIComponent(FLAG_DIR)}/${fileCode}.png`;
 }
 
 function formatKickoffDate(ts: Timestamp) {
@@ -612,6 +621,13 @@ function formatKickoffDate(ts: Timestamp) {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}/${m}/${day}`;
+}
+
+function formatDateTabLabel(dateKey: string) {
+  const iso = `${dateKey.replace(/\//g, '-')}T00:00:00`;
+  const d = new Date(iso);
+  const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()] ?? '';
+  return `${dateKey}(${w})`;
 }
 
 function formatKickoff(ts: Timestamp) {
@@ -665,6 +681,62 @@ function teamLabel(team: string) {
   return raw;
 }
 
+const KATAKANA_BY_CODE: Record<string, string> = {
+  ARG: 'アルゼンチン',
+  AUS: 'オーストラリア',
+  AUT: 'オーストリア',
+  BEL: 'ベルギー',
+  BIH: 'ボスニア・ヘルツェゴビナ',
+  BRA: 'ブラジル',
+  CAN: 'カナダ',
+  CIV: 'コートジボワール',
+  COD: 'コンゴ',
+  COL: 'コロンビア',
+  CPV: 'カーボベルデ',
+  CRO: 'クロアチア',
+  CUW: 'キュラソー',
+  CZE: 'チェコ',
+  ECU: 'エクアドル',
+  EGY: 'エジプト',
+  ENG: 'イングランド',
+  ESP: 'スペイン',
+  FRA: 'フランス',
+  GER: 'ドイツ',
+  HAI: 'ハイチ',
+  IRN: 'イラン',
+  IRQ: 'イラク',
+  JOR: 'ヨルダン',
+  JPN: '日本',
+  KOR: '韓国',
+  KSA: 'サウジアラビア',
+  MAR: 'モロッコ',
+  MEX: 'メキシコ',
+  NED: 'オランダ',
+  NOR: 'ノルウェー',
+  NZL: 'ニュージーランド',
+  PAR: 'パラグアイ',
+  POR: 'ポルトガル',
+  QAT: 'カタール',
+  RSA: '南アフリカ',
+  SCO: 'スコットランド',
+  SEN: 'セネガル',
+  SUI: 'スイス',
+  SWE: 'スウェーデン',
+  TUN: 'チュニジア',
+  TUR: 'トルコ',
+  URU: 'ウルグアイ',
+  USA: 'アメリカ',
+  UZB: 'ウズベキスタン',
+};
+
+function teamDisplayName(team: string) {
+  const raw = (team ?? '').trim();
+  if (!raw) return '';
+  const code = teamLabel(raw);
+  if (/^[A-Z]{3}$/.test(code) && KATAKANA_BY_CODE[code]) return KATAKANA_BY_CODE[code];
+  return raw;
+}
+
 const DEFAULT_STAGES = Array.from({ length: 12 }, (_, i) => `グループ${String.fromCharCode('A'.charCodeAt(0) + i)}`);
 
 export default function Wc2026SchedulePage() {
@@ -672,6 +744,8 @@ export default function Wc2026SchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [brokenFlagSrcs, setBrokenFlagSrcs] = useState<Record<string, boolean>>({});
   const [openMatchesByStage, setOpenMatchesByStage] = useState<Record<string, boolean>>({});
+  const [viewMode, setViewMode] = useState<'all' | 'group'>('group');
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
   const seedItems = useMemo<ScheduleItem[]>(() => {
     return SEED_SCHEDULE.map((x) => ({
@@ -730,6 +804,29 @@ export default function Wc2026SchedulePage() {
       .sort((a, b) => stageSortKey(a.stage) - stageSortKey(b.stage));
     return out;
   }, [effectiveItems]);
+
+  const allByDate = useMemo(() => {
+    const sorted = [...effectiveItems].sort((a, b) => a.kickoffAt.toMillis() - b.kickoffAt.toMillis());
+    const map = new Map<string, ScheduleItem[]>();
+    for (const m of sorted) {
+      const key = formatKickoffDate(m.kickoffAt);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(m);
+    }
+    return Array.from(map.entries()).map(([date, xs]) => ({ date, items: xs }));
+  }, [effectiveItems]);
+
+  useEffect(() => {
+    if (viewMode !== 'all') return;
+    if (allByDate.length === 0) return;
+    if (selectedDate && allByDate.some((x) => x.date === selectedDate)) return;
+    setSelectedDate(allByDate[0].date);
+  }, [allByDate, selectedDate, viewMode]);
+
+  const selectedAllBlock = useMemo(() => {
+    if (!selectedDate) return allByDate[0];
+    return allByDate.find((x) => x.date === selectedDate) ?? allByDate[0];
+  }, [allByDate, selectedDate]);
 
   const tableByStage = useMemo(() => {
     const out: Record<string, TeamRow[]> = {};
@@ -818,165 +915,290 @@ export default function Wc2026SchedulePage() {
           <div className="mt-4 px-1 text-sm text-white/70">データがありません</div>
         )}
 
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {itemsByStage.map((block) => {
-            const stage = block.stage;
-            const isOpen = openMatchesByStage[stage] ?? true;
-            const rows = tableByStage[stage] ?? [];
+        <div className="mt-4 px-1">
+          <div className="inline-flex rounded-full bg-white/10 p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode('all')}
+              className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+                viewMode === 'all' ? 'bg-white text-slate-900' : 'text-white/80'
+              }`}
+            >
+              全日程
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('group')}
+              className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+                viewMode === 'group' ? 'bg-white text-slate-900' : 'text-white/80'
+              }`}
+            >
+              グループステージ
+            </button>
+          </div>
+        </div>
 
-            return (
-              <div key={stage} className="rounded-2xl bg-white shadow-sm overflow-hidden">
-                <div className="px-4 pt-4 pb-2 text-sm font-bold text-slate-900">{stage}</div>
+        {viewMode === 'all' ? (
+          <div className="mt-4">
+            <div className="px-1">
+              <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-2">
+                {allByDate.map((d) => (
+                  <button
+                    key={d.date}
+                    type="button"
+                    onClick={() => setSelectedDate(d.date)}
+                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition ${
+                      (selectedAllBlock?.date ?? '') === d.date
+                        ? 'bg-white text-slate-900'
+                        : 'bg-white/10 text-white/80'
+                    }`}
+                  >
+                    {formatDateTabLabel(d.date)}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                <div className="px-4 pb-3">
-                  <div className="grid grid-cols-[22px_1fr_28px_30px_48px_34px_60px] items-center gap-2 text-[10px] text-slate-500">
-                    <div>順</div>
-                    <div>チーム</div>
-                    <div className="text-right">P</div>
-                    <div className="text-right">GD</div>
-                    <div className="text-right">+/-</div>
-                    <div className="text-right">Pts</div>
-                    <div className="text-right">form</div>
-                  </div>
-                  <div className="mt-1 divide-y divide-slate-200">
-                    {rows.map((r, idx) => {
-                      const gd = r.gf - r.ga;
-                      const src = getFlagSrc(r.team);
-                      const broken = src ? brokenFlagSrcs[src] : false;
+            <div className="mt-3 overflow-hidden rounded-2xl bg-white shadow-sm">
+              <div className="px-4 pt-4 pb-2 text-sm font-bold text-slate-900">{selectedAllBlock?.date ?? ''}</div>
+              <div className="px-4 pb-4">
+                <div className="space-y-2">
+                  {(selectedAllBlock?.items ?? []).map((m) => {
+                      const hSrc = getFlagSrc(m.homeTeam);
+                      const aSrc = getFlagSrc(m.awayTeam);
+                      const hBroken = hSrc ? brokenFlagSrcs[hSrc] : false;
+                      const aBroken = aSrc ? brokenFlagSrcs[aSrc] : false;
+                      const hasScore =
+                        typeof m.homeScore === 'number' &&
+                        typeof m.awayScore === 'number' &&
+                        Number.isFinite(m.homeScore) &&
+                        Number.isFinite(m.awayScore);
+
                       return (
-                        <div
-                          key={teamLabel(r.team)}
-                          className="grid grid-cols-[22px_1fr_28px_30px_48px_34px_60px] items-center gap-2 py-2 text-xs"
-                        >
-                          <div className="text-slate-700">{idx + 1}</div>
-                          <div className="flex min-w-0 items-center gap-2 font-semibold text-slate-900">
-                            {src && !broken ? (
-                              <img
-                                src={src}
-                                alt=""
-                                className="h-4 w-4 shrink-0 rounded-sm object-cover"
-                                onError={() => setBrokenFlagSrcs((prev) => ({ ...prev, [src]: true }))}
-                              />
+                        <div key={m.id} className="rounded-xl border border-slate-200 bg-white px-3 py-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-[76px] text-[10px] text-slate-500">
+                                <div>{formatKickoffDate(m.kickoffAt)}</div>
+                                <div>{formatKickoff(m.kickoffAt)}</div>
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                  {hSrc && !hBroken ? (
+                                    <img
+                                      src={hSrc}
+                                      alt=""
+                                      className="h-4 w-4 shrink-0 rounded-sm bg-slate-100 object-contain"
+                                      onError={() => setBrokenFlagSrcs((prev) => ({ ...prev, [hSrc]: true }))}
+                                    />
+                                  ) : (
+                                    <span className="inline-flex h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
+                                  )}
+                                  <span className="truncate">{teamDisplayName(m.homeTeam)}</span>
+                                </div>
+                                <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                  {aSrc && !aBroken ? (
+                                    <img
+                                      src={aSrc}
+                                      alt=""
+                                      className="h-4 w-4 shrink-0 rounded-sm bg-slate-100 object-contain"
+                                      onError={() => setBrokenFlagSrcs((prev) => ({ ...prev, [aSrc]: true }))}
+                                    />
+                                  ) : (
+                                    <span className="inline-flex h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
+                                  )}
+                                  <span className="truncate">{teamDisplayName(m.awayTeam)}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {hasScore ? (
+                              <div className="flex items-center gap-2">
+                                <div className="text-lg font-bold text-slate-900">
+                                  {m.homeScore}-{m.awayScore}
+                                </div>
+                                <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
+                                  0
+                                </div>
+                              </div>
                             ) : (
-                              <span className="inline-flex h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
+                              <button className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white">
+                                予想する
+                              </button>
                             )}
-                            <span className="truncate">{teamLabel(r.team)}</span>
-                          </div>
-                          <div className="text-right text-slate-700">{r.p}</div>
-                          <div className="text-right text-slate-700">{gd}</div>
-                          <div className="text-right text-slate-700">
-                            {r.gf}/{r.ga}
-                          </div>
-                          <div className="text-right font-bold text-slate-900">{r.pts}</div>
-                          <div className="flex justify-end gap-1">
-                            {r.form.map((f, i) => (
-                              <span
-                                key={`${teamLabel(r.team)}_${i}`}
-                                className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${formBadgeClassName(
-                                  f,
-                                )}`}
-                              >
-                                {f}
-                              </span>
-                            ))}
                           </div>
                         </div>
                       );
                     })}
-                    {rows.length === 0 && (
-                      <div className="py-3 text-xs text-slate-400">-</div>
-                    )}
-                  </div>
+                  {(selectedAllBlock?.items ?? []).length === 0 && (
+                    <div className="px-1 py-2 text-xs text-slate-400">データがありません</div>
+                  )}
                 </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {itemsByStage.map((block) => {
+              const stage = block.stage;
+              const isOpen = openMatchesByStage[stage] ?? true;
+              const rows = tableByStage[stage] ?? [];
 
-                <button
-                  onClick={() => setOpenMatchesByStage((prev) => ({ ...prev, [stage]: !(prev[stage] ?? true) }))}
-                  className="w-full border-t border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-900"
-                >
-                  {isOpen ? '▼' : '▶'} 対戦カード（タップで表示）
-                </button>
+              return (
+                <div key={stage} className="rounded-2xl bg-white shadow-sm overflow-hidden">
+                  <div className="px-4 pt-4 pb-2 text-sm font-bold text-slate-900">{stage}</div>
 
-                {isOpen && (
-                  <div className="px-4 pb-4">
-                    <div className="space-y-2">
-                      {block.items.map((m) => {
-                        const hSrc = getFlagSrc(m.homeTeam);
-                        const aSrc = getFlagSrc(m.awayTeam);
-                        const hBroken = hSrc ? brokenFlagSrcs[hSrc] : false;
-                        const aBroken = aSrc ? brokenFlagSrcs[aSrc] : false;
-                        const hasScore =
-                          typeof m.homeScore === 'number' &&
-                          typeof m.awayScore === 'number' &&
-                          Number.isFinite(m.homeScore) &&
-                          Number.isFinite(m.awayScore);
-
+                  <div className="px-4 pb-3">
+                    <div className="grid grid-cols-[22px_1fr_28px_30px_48px_34px_60px] items-center gap-2 text-[10px] text-slate-500">
+                      <div>順</div>
+                      <div>チーム</div>
+                      <div className="text-right">P</div>
+                      <div className="text-right">GD</div>
+                      <div className="text-right">+/-</div>
+                      <div className="text-right">Pts</div>
+                      <div className="text-right">form</div>
+                    </div>
+                    <div className="mt-1 divide-y divide-slate-200">
+                      {rows.map((r, idx) => {
+                        const gd = r.gf - r.ga;
+                        const src = getFlagSrc(r.team);
+                        const broken = src ? brokenFlagSrcs[src] : false;
                         return (
-                          <div key={m.id} className="rounded-xl border border-slate-200 bg-white px-3 py-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-3">
-                                <div className="w-[76px] text-[10px] text-slate-500">
-                                  <div>{formatKickoffDate(m.kickoffAt)}</div>
-                                  <div>{formatKickoff(m.kickoffAt)}</div>
-                                </div>
-
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                    {hSrc && !hBroken ? (
-                                      <img
-                                        src={hSrc}
-                                        alt=""
-                                        className="h-4 w-4 shrink-0 rounded-sm object-cover"
-                                        onError={() => setBrokenFlagSrcs((prev) => ({ ...prev, [hSrc]: true }))}
-                                      />
-                                    ) : (
-                                      <span className="inline-flex h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
-                                    )}
-                                    <span className="truncate">{m.homeTeam}</span>
-                                  </div>
-                                  <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                    {aSrc && !aBroken ? (
-                                      <img
-                                        src={aSrc}
-                                        alt=""
-                                        className="h-4 w-4 shrink-0 rounded-sm object-cover"
-                                        onError={() => setBrokenFlagSrcs((prev) => ({ ...prev, [aSrc]: true }))}
-                                      />
-                                    ) : (
-                                      <span className="inline-flex h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
-                                    )}
-                                    <span className="truncate">{m.awayTeam}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {hasScore ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="text-lg font-bold text-slate-900">
-                                    {m.homeScore}-{m.awayScore}
-                                  </div>
-                                  <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
-                                    0
-                                  </div>
-                                </div>
+                          <div
+                            key={teamLabel(r.team)}
+                            className="grid grid-cols-[22px_1fr_28px_30px_48px_34px_60px] items-center gap-2 py-2 text-xs"
+                          >
+                            <div className="text-slate-700">{idx + 1}</div>
+                            <div className="flex min-w-0 items-center gap-2 font-semibold text-slate-900">
+                              {src && !broken ? (
+                                <img
+                                  src={src}
+                                  alt=""
+                                  className="h-4 w-4 shrink-0 rounded-sm bg-slate-100 object-contain"
+                                  onError={() => setBrokenFlagSrcs((prev) => ({ ...prev, [src]: true }))}
+                                />
                               ) : (
-                                <button className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white">
-                                  予想する
-                                </button>
+                                <span className="inline-flex h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
                               )}
+                              <span className="truncate">{teamDisplayName(r.team)}</span>
+                            </div>
+                            <div className="text-right text-slate-700">{r.p}</div>
+                            <div className="text-right text-slate-700">{gd}</div>
+                            <div className="text-right text-slate-700">
+                              {r.gf}/{r.ga}
+                            </div>
+                            <div className="text-right font-bold text-slate-900">{r.pts}</div>
+                            <div className="flex justify-end gap-1">
+                              {r.form.map((f, i) => (
+                                <span
+                                  key={`${teamLabel(r.team)}_${i}`}
+                                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ${formBadgeClassName(
+                                    f,
+                                  )}`}
+                                >
+                                  {f}
+                                </span>
+                              ))}
                             </div>
                           </div>
                         );
                       })}
-                      {block.items.length === 0 && (
-                        <div className="px-1 py-2 text-xs text-slate-400">データがありません</div>
+                      {rows.length === 0 && (
+                        <div className="py-3 text-xs text-slate-400">-</div>
                       )}
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+
+                  <button
+                    onClick={() => setOpenMatchesByStage((prev) => ({ ...prev, [stage]: !(prev[stage] ?? true) }))}
+                    className="w-full border-t border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-900"
+                  >
+                    {isOpen ? '▼' : '▶'} 対戦カード（タップで表示）
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-4 pb-4">
+                      <div className="space-y-2">
+                        {block.items.map((m) => {
+                          const hSrc = getFlagSrc(m.homeTeam);
+                          const aSrc = getFlagSrc(m.awayTeam);
+                          const hBroken = hSrc ? brokenFlagSrcs[hSrc] : false;
+                          const aBroken = aSrc ? brokenFlagSrcs[aSrc] : false;
+                          const hasScore =
+                            typeof m.homeScore === 'number' &&
+                            typeof m.awayScore === 'number' &&
+                            Number.isFinite(m.homeScore) &&
+                            Number.isFinite(m.awayScore);
+
+                          return (
+                            <div key={m.id} className="rounded-xl border border-slate-200 bg-white px-3 py-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-[76px] text-[10px] text-slate-500">
+                                    <div>{formatKickoffDate(m.kickoffAt)}</div>
+                                    <div>{formatKickoff(m.kickoffAt)}</div>
+                                  </div>
+
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                      {hSrc && !hBroken ? (
+                                        <img
+                                          src={hSrc}
+                                          alt=""
+                                          className="h-4 w-4 shrink-0 rounded-sm bg-slate-100 object-contain"
+                                          onError={() => setBrokenFlagSrcs((prev) => ({ ...prev, [hSrc]: true }))}
+                                        />
+                                      ) : (
+                                        <span className="inline-flex h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
+                                      )}
+                                      <span className="truncate">{teamDisplayName(m.homeTeam)}</span>
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                      {aSrc && !aBroken ? (
+                                        <img
+                                          src={aSrc}
+                                          alt=""
+                                          className="h-4 w-4 shrink-0 rounded-sm bg-slate-100 object-contain"
+                                          onError={() => setBrokenFlagSrcs((prev) => ({ ...prev, [aSrc]: true }))}
+                                        />
+                                      ) : (
+                                        <span className="inline-flex h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
+                                      )}
+                                      <span className="truncate">{teamDisplayName(m.awayTeam)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {hasScore ? (
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-lg font-bold text-slate-900">
+                                      {m.homeScore}-{m.awayScore}
+                                    </div>
+                                    <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
+                                      0
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white">
+                                    予想する
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {block.items.length === 0 && (
+                          <div className="px-1 py-2 text-xs text-slate-400">データがありません</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

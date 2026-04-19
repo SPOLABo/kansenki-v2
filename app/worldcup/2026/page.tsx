@@ -136,6 +136,15 @@ export default async function Wc2026IndexPage() {
         <Wc2026LoginCta redirectTo="/worldcup/2026" />
 
         <Wc2026RankingTabs title="日本：みんなの予想ランキング" rankingByStatus={rankingByStatus} />
+
+        <div className="mt-6 px-1">
+          <Link
+            href="/worldcup/2026/schedule"
+            className="block w-full rounded-2xl bg-orange-600 py-3 text-center text-sm font-bold text-white hover:bg-orange-500 transition-colors"
+          >
+            日程を見る
+          </Link>
+        </div>
       </div>
     </div>
   );
