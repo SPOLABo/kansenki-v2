@@ -12,8 +12,20 @@ const ShareButton: React.FC<ShareButtonProps> = ({ title, url }) => {
     const text = encodeURIComponent(title);
     // ハッシュタグを追加
     const hashtags = 'SAMURAIBLUE,ワールドカップ,日本代表,W杯2026,スポカレ,代表メンバー予想';
-    const shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}&hashtags=${hashtags}`;
-    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    const encodedUrl = encodeURIComponent(url);
+    const webIntentUrl = `https://x.com/intent/tweet?text=${text}&url=${encodedUrl}&hashtags=${encodeURIComponent(hashtags)}`;
+    const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}`)}&hashtags=${encodeURIComponent(hashtags)}`;
+
+    const w = window.open(webIntentUrl, '_blank', 'noopener,noreferrer');
+    const start = Date.now();
+    window.location.href = appUrl;
+
+    window.setTimeout(() => {
+      if (Date.now() - start < 1500) {
+        if (w && !w.closed) return;
+        window.open(webIntentUrl, '_blank', 'noopener,noreferrer');
+      }
+    }, 600);
   };
 
   return (
