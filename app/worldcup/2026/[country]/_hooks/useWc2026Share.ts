@@ -110,12 +110,19 @@ export function useWc2026Share({
       const url = `${origin}/worldcup/2026/${countrySlug}/share/${shareId}`;
       const title = `${countryNameJa}：W杯2026 予想`;
       const text = encodeURIComponent(title);
-      const hashtags = encodeURIComponent('SAMURAIBLUE,ワールドカップ,W杯2026,スポカレ,代表メンバー予想');
+      const rawHashtags = 'SAMURAIBLUE,ワールドカップ,W杯2026,スポカレ,代表メンバー予想';
+      const hashtags = encodeURIComponent(rawHashtags);
       const shareUrl = `https://x.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}&hashtags=${hashtags}`;
 
       const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
       const isIOS = /iP(hone|od|ad)/.test(ua);
-      const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}`)}&hashtags=${hashtags}`;
+      const hashtagText = rawHashtags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .map((t) => `#${t}`)
+        .join(' ');
+      const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}\n\n${hashtagText}`)}`;
 
       if (isIOS) {
         const startedAt = Date.now();

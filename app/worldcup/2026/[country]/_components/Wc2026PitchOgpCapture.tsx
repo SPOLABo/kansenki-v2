@@ -42,7 +42,7 @@ export function Wc2026PitchOgpCapture(props: {
             style={{
               width: 1200,
               height: 586,
-              transform: 'scale(0.9)',
+              transform: 'scale(0.98)',
               transformOrigin: 'center',
             }}
           >
@@ -70,8 +70,8 @@ export function Wc2026PitchOgpCapture(props: {
                   style={{ left: `${slot.leftPct}%`, top: `${slot.topPct}%` }}
                 >
                   <div
-                    className="rounded-full text-white/90 whitespace-nowrap truncate border bg-black/55 border-white/10 px-4 py-2 text-[16px]"
-                    style={{ maxWidth: 520 }}
+                    className="rounded-full text-white/90 whitespace-nowrap truncate border bg-black/55 border-white/10 px-5 py-2.5 text-[18px]"
+                    style={{ maxWidth: 560 }}
                   >
                     {p ? (
                       <>
