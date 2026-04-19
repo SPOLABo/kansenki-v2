@@ -7,6 +7,8 @@ import { Wc2026RankingTabs } from './_components/Wc2026RankingTabs';
 import { WC2026_CANDIDATES_BY_COUNTRY } from '@/lib/worldcup/wc2026Candidates';
 import { Wc2026LoginCta } from './_components/Wc2026LoginCta';
 
+export const runtime = 'nodejs';
+
 type PlayerAgg = {
   id: string;
   name: string;
@@ -53,6 +55,8 @@ async function getCountryAggregates(countrySlug: string): Promise<PlayerAgg[]> {
 
 export default async function Wc2026IndexPage() {
   const visibleCountries = WC2026_COUNTRIES.filter((c) => c.slug === 'japan' || c.slug === 'england');
+
+  const ogpImageSrc = `/${encodeURIComponent('選考予想OGP.png')}`;
 
   const flagSrcBySlug: Record<string, string> = {
     japan: 'https://flagcdn.com/w320/jp.png',
@@ -104,7 +108,7 @@ export default async function Wc2026IndexPage() {
       <div className="px-3 pt-4 pb-24">
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
           <img
-            src="/選考予想OGP.png"
+            src={ogpImageSrc}
             alt="選考予想"
             className="w-full aspect-[1200/630] object-cover"
             loading="lazy"
