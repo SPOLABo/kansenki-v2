@@ -139,6 +139,17 @@ export const WC2026_CANDIDATES_BY_COUNTRY: Record<Wc2026CountryCode, Wc2026Candi
     },
     },
     {
+      id: "jpn-tomiyasu-takehiro",
+      name: "富安健洋",
+      position: "DF" as SquadPosition,
+    age: 27,
+    club: "アヤックス・アムステルダム",
+    stats: {
+      appearances: 42,
+      goals: 1,
+    },
+    },
+    {
       id: "jpn-watanabe-tsuyoshi",
       name: "渡辺剛",
       position: "DF" as SquadPosition,

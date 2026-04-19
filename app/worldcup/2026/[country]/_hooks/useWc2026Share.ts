@@ -113,6 +113,29 @@ export function useWc2026Share({
       const hashtags = encodeURIComponent('SAMURAIBLUE,ワールドカップ,W杯2026,スポカレ,代表メンバー予想');
       const shareUrl = `https://x.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}&hashtags=${hashtags}`;
 
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+      const isIOS = /iP(hone|od|ad)/.test(ua);
+      const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}`)}&hashtags=${hashtags}`;
+
+      if (isIOS) {
+        const startedAt = Date.now();
+        window.location.href = appUrl;
+        window.setTimeout(() => {
+          const stillHere = document.visibilityState === 'visible' && Date.now() - startedAt >= 700;
+          if (!stillHere) return;
+          if (popup) {
+            popup.location.href = shareUrl;
+          } else {
+            const opened = window.open(shareUrl, '_blank');
+            if (!opened) window.location.href = shareUrl;
+          }
+        }, 800);
+
+        setShareLink(url);
+        setStatusMessage('Xアプリが開かない場合は、共有リンクをコピーして貼り付けてください');
+        return;
+      }
+
       if (canNativeShare) {
         try {
           await (navigator as any).share({ title, text: title, url });

@@ -16,16 +16,14 @@ const ShareButton: React.FC<ShareButtonProps> = ({ title, url }) => {
     const webIntentUrl = `https://x.com/intent/tweet?text=${text}&url=${encodedUrl}&hashtags=${encodeURIComponent(hashtags)}`;
     const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}`)}&hashtags=${encodeURIComponent(hashtags)}`;
 
-    const w = window.open(webIntentUrl, '_blank', 'noopener,noreferrer');
-    const start = Date.now();
+    const startedAt = Date.now();
     window.location.href = appUrl;
 
     window.setTimeout(() => {
-      if (Date.now() - start < 1500) {
-        if (w && !w.closed) return;
-        window.open(webIntentUrl, '_blank', 'noopener,noreferrer');
-      }
-    }, 600);
+      const stillHere = document.visibilityState === 'visible' && Date.now() - startedAt >= 700;
+      if (!stillHere) return;
+      window.open(webIntentUrl, '_blank', 'noopener,noreferrer');
+    }, 800);
   };
 
   return (
