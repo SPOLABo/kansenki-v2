@@ -237,6 +237,8 @@ export default function Wc2026CountryPage() {
           <div className="mt-1 text-xs text-white/60 text-center">選出：{pickedCount}人（当確◎：{sureCount}）</div>
         </div>
 
+        <div className="h-4" />
+
         {!loading && !user ? (
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/80">
             編集・保存するにはログインしてください
@@ -247,10 +249,10 @@ export default function Wc2026CountryPage() {
           <button
             type="button"
             onClick={() => setSquadViewMode('list')}
-            className={`rounded-full px-3 py-1 text-xs border transition-colors ${
+            className={`rounded-full px-4 py-2 text-xs font-bold border transition-all shadow-sm ${
               squadViewMode === 'list'
-                ? 'bg-white/15 text-white border-white/20'
-                : 'bg-transparent text-white/70 border-white/10 hover:bg-white/10'
+                ? 'bg-gradient-to-r from-sky-500 to-indigo-500 text-white border-white/20 shadow-lg shadow-sky-500/20 ring-2 ring-sky-400/40'
+                : 'bg-white/10 text-white/85 border-white/15 hover:bg-white/15 hover:text-white'
             }`}
           >
             メンバー表
@@ -258,10 +260,10 @@ export default function Wc2026CountryPage() {
           <button
             type="button"
             onClick={() => setSquadViewMode('pitch')}
-            className={`rounded-full px-3 py-1 text-xs border transition-colors ${
+            className={`rounded-full px-4 py-2 text-xs font-bold border transition-all shadow-sm ${
               squadViewMode === 'pitch'
-                ? 'bg-white/15 text-white border-white/20'
-                : 'bg-transparent text-white/70 border-white/10 hover:bg-white/10'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-white/20 shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-400/40'
+                : 'bg-white/10 text-white/85 border-white/15 hover:bg-white/15 hover:text-white'
             }`}
           >
             ピッチ（3-4-2-1）
@@ -388,10 +390,40 @@ export default function Wc2026CountryPage() {
                               }
                             },
                           } as any);
-                          const a = document.createElement('a');
-                          a.href = dataUrl;
-                          a.download = `wc2026-${countrySlug || 'squad'}-${squadViewMode === 'pitch' ? 'pitch' : 'table'}.png`;
-                          a.click();
+
+                          const filename = `wc2026-${countrySlug || 'squad'}-${squadViewMode === 'pitch' ? 'pitch' : 'table'}.png`;
+                          const blob = await (await fetch(dataUrl)).blob();
+                          const file = new File([blob], filename, { type: 'image/png' });
+
+                          const canShareFiles =
+                            typeof navigator !== 'undefined' &&
+                            'share' in navigator &&
+                            'canShare' in navigator &&
+                            (navigator as any).canShare({ files: [file] });
+
+                          if (canShareFiles) {
+                            await (navigator as any).share({ files: [file], title: filename });
+                            return;
+                          }
+
+                          const objectUrl = URL.createObjectURL(blob);
+                          try {
+                            const a = document.createElement('a');
+                            a.href = objectUrl;
+                            a.download = filename;
+                            a.rel = 'noopener';
+                            a.click();
+
+                            window.setTimeout(() => {
+                              try {
+                                window.open(objectUrl, '_blank', 'noopener,noreferrer');
+                              } catch {
+                                // ignore
+                              }
+                            }, 150);
+                          } finally {
+                            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+                          }
                         } catch {
                           // ignore
                         } finally {
