@@ -1,7 +1,82 @@
+rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.uid == 'WrNiMMdeVZTNtxZPNa102qZGI8y1';
+    }
+
+    function authorNotChanged() {
+      return request.resource.data.authorId == resource.data.authorId;
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+                    && request.resource.data.authorId == request.auth.uid;
+      allow update: if isOwner(resource.data.authorId) && authorNotChanged();
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+
+    match /simple-posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+                    && request.resource.data.authorId == request.auth.uid;
+      allow update: if isOwner(resource.data.authorId) && authorNotChanged();
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+
+    match /simple-travels/{docId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+                    && request.resource.data.authorId == request.auth.uid;
+      allow update: if isOwner(resource.data.authorId) && authorNotChanged();
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+
+    match /spots/{spotId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+                    && request.resource.data.authorId == request.auth.uid;
+      allow update: if isOwner(resource.data.authorId) && authorNotChanged();
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId) || isAdmin();
+
+      match /likes/{postId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /bookmarks/{postId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /thanks/{postId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
