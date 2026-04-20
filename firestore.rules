@@ -68,9 +68,43 @@ service cloud.firestore {
       match /thanks/{postId} {
         allow read, write: if isOwner(userId);
       }
+
+      match /wc2026SquadPredictions/{countrySlug} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /wc2026PublicSquadPredictions/{docId} {
+      allow read: if true;
+      allow create, update: if isSignedIn()
+                            && docId.split('_').size() == 2
+                            && docId.split('_')[1] == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /wc2026PredictionShares/{shareId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+                    && request.resource.data.createdByUid == request.auth.uid;
+      allow update: if isSignedIn()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount']);
+      allow delete: if (isSignedIn() && resource.data.createdByUid == request.auth.uid) || isAdmin();
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn()
+                      && request.resource.data.createdByUid == request.auth.uid;
+        allow update: if false;
+        allow delete: if (isSignedIn() && resource.data.createdByUid == request.auth.uid) || isAdmin();
+      }
+    }
+
+    match /wc2026Schedule/{docId} {
       allow read: if true;
       allow write: if isAdmin();
     }
