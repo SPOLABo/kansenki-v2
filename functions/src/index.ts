@@ -11,6 +11,7 @@ export const getPostStats = onCall({
     'http://localhost:3001',
     'http://localhost:3007',
     'https://footballtop.spocale.com',
+    'https://kaigai-soccer.spocale.com',
   ],
 }, async (request) => {
   try {
