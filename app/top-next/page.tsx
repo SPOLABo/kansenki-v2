@@ -13,7 +13,7 @@ export default function TopNextPage() {
       },
       {
         id: 'event-2',
-        thumbnailSrc: '/欧州圏争い.png',
+        thumbnailSrc: '/小見出しを追加 (2).png',
       },
       {
         id: 'event-3',
