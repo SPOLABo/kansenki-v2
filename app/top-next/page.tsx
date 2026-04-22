@@ -17,7 +17,7 @@ export default function TopNextPage() {
       },
       {
         id: 'event-3',
-        thumbnailSrc: '/選考予想OGP.png',
+        thumbnailSrc: '/小見出しを追加 (3).png',
       },
     ],
     []
