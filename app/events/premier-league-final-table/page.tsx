@@ -67,8 +67,6 @@ const contenderClubIds = [
   'new',
   'lee',
   'nfo',
-  'tot',
-  'bur',
 ] as const;
 
 const pointsByClubId: Record<string, number> = {
