@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { premierLeagueClubs } from '@/lib/clubMaster';
 import { manualFixtures } from '@/lib/fixtures/manualFixtures';
@@ -17,18 +17,35 @@ const DISPLAY_RANK_COUNT = 7;
 
 function serializeSelection(selectedByRank: (string | null)[]) {
   const payload = selectedByRank.slice(0, DISPLAY_RANK_COUNT).map((x) => (typeof x === 'string' ? x : '-')).join(',');
-  return encodeURIComponent(payload);
+  return payload;
 }
 
 function deserializeSelection(raw: string, clubs: ClubRow[]) {
   const known = new Set(clubs.map((c) => c.id));
-  const decoded = decodeURIComponent(raw);
-  const parts = decoded.split(',').slice(0, DISPLAY_RANK_COUNT);
+  const parts = raw.split(',').slice(0, DISPLAY_RANK_COUNT);
   const normalized = parts.map((x) => (typeof x === 'string' && known.has(x) ? x : null));
   return [
     ...normalized,
     ...Array.from({ length: Math.max(0, DISPLAY_RANK_COUNT - normalized.length) }, () => null),
   ];
+}
+
+function SearchParamRestore({ clubs, onRestore }: { clubs: ClubRow[]; onRestore: (next: (string | null)[]) => void }) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    try {
+      const s = searchParams?.get('s');
+      if (!s) return;
+      const restored = deserializeSelection(s, clubs);
+      onRestore(restored);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+    } catch {
+      // ignore
+    }
+  }, [clubs, onRestore, searchParams]);
+
+  return null;
 }
 
 const CUT_OFF_ISO = '2026-04-22T00:00:00+09:00';
@@ -83,7 +100,6 @@ function normalizeFixtureClubId(id: string) {
 }
 
 export default function PremierLeagueFinalTableEventPage() {
-  const searchParams = useSearchParams();
   const clubs = useMemo<ClubRow[]>(() => {
     return Object.values(premierLeagueClubs)
       .map((c) => ({ id: c.id, nameJa: c.nameJa, logoSrc: c.logoSrc }))
@@ -92,18 +108,6 @@ export default function PremierLeagueFinalTableEventPage() {
 
   const [selectedByRank, setSelectedByRank] = useState<(string | null)[]>(() => Array.from({ length: DISPLAY_RANK_COUNT }, () => null));
   const [activeRankIndex, setActiveRankIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    try {
-      const s = searchParams?.get('s');
-      if (!s) return;
-      const restored = deserializeSelection(s, clubs);
-      setSelectedByRank(restored);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
-    } catch {
-      // ignore
-    }
-  }, [clubs, searchParams]);
 
   useEffect(() => {
     try {
@@ -193,7 +197,7 @@ export default function PremierLeagueFinalTableEventPage() {
     try {
       const origin = window.location.origin;
       const s = serializeSelection(selectedByRank);
-      const sharePageUrl = `${origin}/events/premier-league-final-table?s=${s}`;
+      const sharePageUrl = `${origin}/events/premier-league-final-table?s=${encodeURIComponent(s)}`;
       const text = encodeURIComponent('Premier League 最終順位予想');
       const encodedUrl = encodeURIComponent(sharePageUrl);
       const hashtags = encodeURIComponent('プレミアリーグ,PL,スポカレ');
@@ -232,6 +236,9 @@ export default function PremierLeagueFinalTableEventPage() {
   return (
     <main className="min-h-screen bg-black">
       <div className="mx-auto max-w-3xl px-4 py-6">
+        <Suspense fallback={null}>
+          <SearchParamRestore clubs={clubs} onRestore={setSelectedByRank} />
+        </Suspense>
         <div className="mb-5">
           <div className="text-xs font-semibold tracking-widest text-white/60">EVENT</div>
           <h1 className="mt-1 text-xl font-bold text-white">Premier League 最終順位予想</h1>
