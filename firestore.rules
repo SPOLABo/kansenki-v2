@@ -106,12 +106,21 @@ service cloud.firestore {
 
     match /plFinalTablePredictionShares/{shareId} {
       allow read: if true;
-      allow create: if (request.resource.data.keys().hasOnly(['schemaVersion', 'eventId', 'snapshotJson', 'createdAt'])
-                      || request.resource.data.keys().hasOnly(['schemaVersion', 'eventId', 'snapshotJson']))
+      allow create: if isSignedIn()
+                    && request.resource.data.keys().hasOnly([
+                      'schemaVersion',
+                      'eventId',
+                      'snapshotJson',
+                      'ogImageUrl',
+                      'createdByUid',
+                      'createdAt'
+                    ])
                     && request.resource.data.schemaVersion == 1
                     && request.resource.data.eventId == 'premier-league-final-table'
                     && request.resource.data.snapshotJson is string
-                    && request.resource.data.snapshotJson.size() <= 10000;
+                    && request.resource.data.snapshotJson.size() <= 10000
+                    && request.resource.data.createdByUid == request.auth.uid
+                    && (request.resource.data.ogImageUrl == null || request.resource.data.ogImageUrl is string);
       allow update: if false;
       allow delete: if isAdmin();
     }
