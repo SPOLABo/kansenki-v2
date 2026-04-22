@@ -2,14 +2,8 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadString } from 'firebase/storage';
-import { toPng } from 'html-to-image';
-import { v4 as uuidv4 } from 'uuid';
 import { premierLeagueClubs } from '@/lib/clubMaster';
 import { manualFixtures } from '@/lib/fixtures/manualFixtures';
-import { db, storage } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
 
 type ClubRow = {
   id: string;
@@ -19,7 +13,6 @@ type ClubRow = {
 
 const STORAGE_KEY = 'pl_final_table_prediction_v1';
 const DISPLAY_RANK_COUNT = 7;
-const OGP_CAPTURE_ELEMENT_ID = 'pl-final-table-ogp-capture';
 
 const CUT_OFF_ISO = '2026-04-22T00:00:00+09:00';
 
@@ -73,7 +66,6 @@ function normalizeFixtureClubId(id: string) {
 }
 
 export default function PremierLeagueFinalTableEventPage() {
-  const { user } = useAuth();
   const clubs = useMemo<ClubRow[]>(() => {
     return Object.values(premierLeagueClubs)
       .map((c) => ({ id: c.id, nameJa: c.nameJa, logoSrc: c.logoSrc }))
@@ -82,8 +74,6 @@ export default function PremierLeagueFinalTableEventPage() {
 
   const [selectedByRank, setSelectedByRank] = useState<(string | null)[]>(() => Array.from({ length: DISPLAY_RANK_COUNT }, () => null));
   const [activeRankIndex, setActiveRankIndex] = useState<number | null>(null);
-  const [sharing, setSharing] = useState(false);
-  const [shareError, setShareError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -170,96 +160,16 @@ export default function PremierLeagueFinalTableEventPage() {
 
   const sharePrediction = async () => {
     if (typeof window === 'undefined') return;
-    if (sharing) return;
-    if (!user?.uid) {
-      setShareError('シェア機能はログイン後に利用できます');
-      return;
-    }
-
-    setShareError(null);
-    setSharing(true);
     try {
-      const shareId = uuidv4().replace(/-/g, '').slice(0, 20);
-
-      const snapshotJson = JSON.stringify({
-        schemaVersion: 1,
-        selectedByRank,
-        createdAtIso: new Date().toISOString(),
-      });
-
-      let ogImageUrl: string | null = null;
-      try {
-        const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-        if (!isLocalhost) {
-          const el = document.getElementById(OGP_CAPTURE_ELEMENT_ID);
-          if (el) {
-            const dataUrl = await toPng(el, {
-              cacheBust: true,
-              pixelRatio: 1,
-              width: 1200,
-              height: 630,
-              backgroundColor: '#020617',
-              style: {
-                opacity: '1',
-                transform: 'none',
-              },
-              onClone: (doc: Document) => {
-                try {
-                  const cloned = doc.getElementById(OGP_CAPTURE_ELEMENT_ID) as HTMLElement | null;
-                  if (!cloned) return;
-                  cloned.style.opacity = '1';
-                  cloned.style.transform = 'none';
-                  cloned.style.left = '0px';
-                  cloned.style.top = '0px';
-                  cloned.style.zIndex = '0';
-                } catch {
-                  // ignore
-                }
-              },
-            } as any);
-            const objectRef = ref(storage, `plFinalTablePredictionShareOgp/${shareId}.png`);
-            await uploadString(objectRef, dataUrl, 'data_url');
-            ogImageUrl = await getDownloadURL(objectRef);
-          }
-        }
-      } catch (e: any) {
-        const code = typeof e?.code === 'string' ? e.code : '';
-        const msg = typeof e?.message === 'string' ? e.message : '';
-        setShareError(`共有画像のアップロードに失敗しました${code || msg ? `：${code || msg}` : ''}`);
-        ogImageUrl = null;
-      }
-
-      try {
-        await setDoc(doc(db, 'plFinalTablePredictionShares', shareId), {
-          schemaVersion: 1,
-          eventId: 'premier-league-final-table',
-          snapshotJson,
-          ogImageUrl,
-          createdByUid: user.uid,
-          createdAt: serverTimestamp(),
-        });
-      } catch (e: any) {
-        const code = typeof e?.code === 'string' ? e.code : '';
-        const msg = typeof e?.message === 'string' ? e.message : '';
-        const projectId = (db as any)?.app?.options?.projectId;
-        const projectSuffix = typeof projectId === 'string' && projectId ? ` (project: ${projectId})` : '';
-        setShareError(`共有の保存に失敗しました${code || msg ? `：${code || msg}` : ''}${projectSuffix}`);
-        return;
-      }
-
       const origin = window.location.origin;
-      const sharePageUrl = `${origin}/events/premier-league-final-table/share/${shareId}`;
+      const sharePageUrl = `${origin}/events/premier-league-final-table`;
       const text = encodeURIComponent('Premier League 最終順位予想');
       const encodedUrl = encodeURIComponent(sharePageUrl);
       const hashtags = encodeURIComponent('プレミアリーグ,PL,スポカレ');
       const webIntentUrl = `https://x.com/intent/tweet?text=${text}&url=${encodedUrl}&hashtags=${hashtags}`;
       window.open(webIntentUrl, '_blank', 'noopener,noreferrer');
-    } catch (e: any) {
-      const code = typeof e?.code === 'string' ? e.code : '';
-      const msg = typeof e?.message === 'string' ? e.message : '';
-      setShareError(`共有の作成に失敗しました${code || msg ? `：${code || msg}` : ''}`);
-    } finally {
-      setSharing(false);
+    } catch {
+      // ignore
     }
   };
 
@@ -303,13 +213,9 @@ export default function PremierLeagueFinalTableEventPage() {
             <button
               type="button"
               onClick={sharePrediction}
-              disabled={sharing}
-              className={
-                'rounded-full px-4 py-2 text-sm font-semibold transition ' +
-                (sharing ? 'bg-white/60 text-black/70' : 'bg-white text-black hover:bg-white/90')
-              }
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
             >
-              {sharing ? '共有画像作成中…' : '予想をシェアする'}
+              予想をシェアする
             </button>
             <button
               type="button"
@@ -485,84 +391,7 @@ export default function PremierLeagueFinalTableEventPage() {
           </div>
         ) : null}
 
-        {shareError ? <div className="mt-4 text-sm font-semibold text-red-300">{shareError}</div> : null}
-
         <div className="mt-6 text-xs text-white/50">※ 予想の保存はローカル保存（端末内）です。後でログイン連携にできます。</div>
-
-        <div
-          id={OGP_CAPTURE_ELEMENT_ID}
-          style={{
-            position: 'fixed',
-            left: '-99999px',
-            top: 0,
-            width: 1200,
-            height: 630,
-            background: 'linear-gradient(180deg, #020617 0%, #0b1533 55%, #070d1f 100%)',
-            color: 'white',
-            padding: 48,
-            opacity: 0,
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ fontSize: 52, fontWeight: 900, letterSpacing: -1 }}>Premier League</div>
-            <div style={{ fontSize: 30, fontWeight: 800, opacity: 0.92 }}>最終順位予想</div>
-          </div>
-          <div
-            style={{
-              marginTop: 22,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-              padding: 18,
-              borderRadius: 26,
-              border: '1px solid rgba(255,255,255,0.14)',
-              background: 'rgba(255,255,255,0.06)',
-            }}
-          >
-            {selectedByRank.slice(0, DISPLAY_RANK_COUNT).map((clubId, idx) => {
-              const rank = idx + 1;
-              const club = clubId ? clubById.get(clubId) : null;
-              return (
-                <div key={`og-${rank}`} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div
-                    style={{
-                      width: 44,
-                      textAlign: 'center',
-                      fontSize: 22,
-                      fontWeight: 900,
-                      opacity: 0.9,
-                    }}
-                  >
-                    {rank}
-                  </div>
-                  {club ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <img
-                        src={club.logoSrc}
-                        width={44}
-                        height={44}
-                        style={{
-                          borderRadius: 999,
-                          background: 'white',
-                          objectFit: 'contain',
-                          padding: 6,
-                          border: '1px solid rgba(255,255,255,0.12)',
-                        }}
-                      />
-                      <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: -0.5 }}>{club.nameJa}</div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 22, fontWeight: 800, opacity: 0.45 }}>未選択</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 22 }}>
-            <div style={{ fontSize: 18, opacity: 0.75, display: 'flex' }}>#プレミアリーグ  #PL  #スポカレ</div>
-            <div style={{ fontSize: 18, opacity: 0.75, display: 'flex' }}>spocale.com</div>
-          </div>
-        </div>
       </div>
     </main>
   );
