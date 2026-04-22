@@ -1,0 +1,70 @@
+[debug] [2026-04-22T09:45:48.505Z] ----------------------------------------------------------------------
+[debug] [2026-04-22T09:45:48.508Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\footb\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-04-22T09:45:48.509Z] CLI Version:   14.26.0
+[debug] [2026-04-22T09:45:48.509Z] Platform:      win32
+[debug] [2026-04-22T09:45:48.509Z] Node Version:  v20.14.0
+[debug] [2026-04-22T09:45:48.509Z] Time:          Wed Apr 22 2026 18:45:48 GMT+0900 (日本標準時)
+[debug] [2026-04-22T09:45:48.510Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-22T09:45:48.724Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-22T09:45:48.725Z] > authorizing via signed-in user (footballtopjp96@gmail.com)
+[debug] [2026-04-22T09:45:48.725Z] [iam] checking project footballtop-a4271 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-04-22T09:45:48.726Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:48.726Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:48.727Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/footballtop-a4271:testIamPermissions [none]
+[debug] [2026-04-22T09:45:48.727Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/footballtop-a4271:testIamPermissions x-goog-quota-user=projects/footballtop-a4271
+[debug] [2026-04-22T09:45:48.728Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/footballtop-a4271:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-04-22T09:45:49.493Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/footballtop-a4271:testIamPermissions 200
+[debug] [2026-04-22T09:45:49.494Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/footballtop-a4271:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-04-22T09:45:49.494Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:49.495Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:49.495Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/footballtop-a4271 [none]
+[debug] [2026-04-22T09:45:49.893Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/footballtop-a4271 200
+[debug] [2026-04-22T09:45:49.893Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/footballtop-a4271 {"projectId":"footballtop-a4271","projectNumber":"212557115335","displayName":"footballtop","name":"projects/footballtop-a4271","resources":{"hostingSite":"footballtop-a4271"},"state":"ACTIVE","etag":"1_1479bd96-de8e-4ae6-815d-c2665325f60c"}
+[debug] [2026-04-22T09:45:53.211Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:53.211Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:53.212Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/footballtop-a4271/sites pageToken=&pageSize=10
+[debug] [2026-04-22T09:45:54.364Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/footballtop-a4271/sites 200
+[debug] [2026-04-22T09:45:54.364Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/footballtop-a4271/sites {"sites":[{"name":"projects/footballtop-a4271/sites/footballtop-a4271","defaultUrl":"https://footballtop-a4271.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2026-04-22T09:45:54.364Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:54.364Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:54.364Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/footballtop-a4271/sites 
+[debug] [2026-04-22T09:45:55.070Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/footballtop-a4271/sites 200
+[debug] [2026-04-22T09:45:55.071Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/footballtop-a4271/sites {"sites":[{"name":"projects/footballtop-a4271/sites/footballtop-a4271","defaultUrl":"https://footballtop-a4271.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2026-04-22T09:45:55.071Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:55.071Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:45:55.071Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/footballtop-a4271/webApps/-/config [none]
+[debug] [2026-04-22T09:45:56.142Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/footballtop-a4271/webApps/-/config 200
+[debug] [2026-04-22T09:45:56.143Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/footballtop-a4271/webApps/-/config {"projectId":"footballtop-a4271","appId":"1:212557115335:web:581f44ae360e4464e333e2","storageBucket":"footballtop-a4271.firebasestorage.app","apiKey":"AIzaSyDTAqmgrQcdNh2lVKuh5lvS-ryIgjuXHAA","authDomain":"footballtop-a4271.firebaseapp.com","messagingSenderId":"212557115335","projectNumber":"212557115335","version":"2"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2026-04-22T09:46:02.272Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:46:02.272Z] Checked if tokens are valid: true, expires at: 1776854511108
+[debug] [2026-04-22T09:46:02.273Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/footballtop-a4271/sites/footballtop-a4271 [none]
+[debug] [2026-04-22T09:46:03.337Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/footballtop-a4271/sites/footballtop-a4271 200
+[debug] [2026-04-22T09:46:03.337Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/footballtop-a4271/sites/footballtop-a4271 {"name":"projects/footballtop-a4271/sites/footballtop-a4271","defaultUrl":"https://footballtop-a4271.web.app","type":"DEFAULT_SITE"}
+[info]   ▲ Next.js 14.2.3
+
+[info]   - Environments: .env.local
+
+
+[info]    Creating an optimized production build ...
+
+[info] uncaughtException [Error: EPERM: operation not permitted, open 'C:\Users\footb\kansenki-v2\.next\trace'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\footb\\kansenki-v2\\.next\\trace'
+}
+
+[debug] [2026-04-22T09:46:23.737Z] Error: ENOENT: no such file or directory, open 'C:\Users\footb\kansenki-v2\.next\server\middleware-manifest.json'
+[error] 
+[error] Error: An unexpected error has occurred.

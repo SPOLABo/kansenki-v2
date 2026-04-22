@@ -104,6 +104,17 @@ service cloud.firestore {
       }
     }
 
+    match /plFinalTablePredictionShares/{shareId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['schemaVersion', 'eventId', 'snapshotJson', 'createdAt'])
+                    && request.resource.data.schemaVersion == 1
+                    && request.resource.data.eventId == 'premier-league-final-table'
+                    && request.resource.data.snapshotJson is string
+                    && request.resource.data.snapshotJson.size() <= 10000;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
     match /wc2026Schedule/{docId} {
       allow read: if true;
       allow write: if isAdmin();
