@@ -92,6 +92,8 @@ export default function MenuDrawer() {
   const pathname = usePathname();
   const isWc2026 = pathname === '/worldcup/2026';
   const isWc2026Path = pathname.startsWith('/worldcup/2026');
+  const isTopNext = pathname === '/top-next';
+  const isEventsPath = pathname.startsWith('/events');
   const activeMenuConfig = isWc2026Path ? wc2026MenuConfig : menuConfig;
 
   const toggleMenu = () => setIsOpen(!isOpen);
@@ -104,20 +106,22 @@ export default function MenuDrawer() {
       <header
         className={
           `fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-center px-4 border-b ` +
-          (isWc2026 ? 'bg-black border-white/10' : 'bg-white dark:bg-black border-gray-200 dark:border-gray-800')
+          (isWc2026 || isTopNext || isEventsPath
+            ? 'bg-black border-white/10'
+            : 'bg-white dark:bg-black border-gray-200 dark:border-gray-800')
         }
       >
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <Link href="/" className="cursor-pointer">
-            {isWc2026 ? (
+            {isWc2026 || isTopNext || isEventsPath ? (
               <Image
                 src="/スポカレロゴ.png"
                 alt="スポカレ"
-                width={140}
-                height={40}
+                width={isTopNext ? 168 : 140}
+                height={isTopNext ? 48 : 40}
                 priority
                 style={{ height: 'auto' }}
-                sizes="140px"
+                sizes={isTopNext ? '168px' : '140px'}
               />
             ) : (
               <>
@@ -147,6 +151,7 @@ export default function MenuDrawer() {
             )}
           </Link>
         </div>
+
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
           <button onClick={toggleMenu} className="focus:outline-none">
             <svg
