@@ -1,12 +1,12 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { getRedirectResult, signInWithPopup, signInWithRedirect, GoogleAuthProvider, TwitterAuthProvider } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 export default function LoginPage() {
   return (
@@ -31,6 +31,7 @@ function LoginPageInner() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const provider = new GoogleAuthProvider();
+  const xProvider = new TwitterAuthProvider();
   useTheme();
 
 
@@ -86,6 +87,54 @@ function LoginPageInner() {
     }
   };
 
+  const redirectToNextPath = () => {
+    const redirect = searchParams?.get('redirect') ?? '';
+    const nextPath = redirect.startsWith('/') ? redirect : '/mypage';
+    router.replace(nextPath);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result?.user) return;
+        if (cancelled) return;
+        setIsLoggingIn(true);
+        await createUserProfile(result.user);
+        redirectToNextPath();
+      } catch (e: any) {
+        const code = typeof e?.code === 'string' ? e.code : '';
+        if (code) {
+          setError(`ログインに失敗しました（${code}）`);
+        } else {
+          setError('ログインに失敗しました。');
+        }
+      } finally {
+        if (!cancelled) setIsLoggingIn(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleLoginX = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
+    setError(null);
+    try {
+      await signInWithRedirect(auth, xProvider);
+    } catch (error: any) {
+      console.error('❌ Xログインエラー:', error);
+      const code = typeof error?.code === 'string' ? error.code : '';
+      setError(code ? `ログインに失敗しました（${code}）` : 'ログインに失敗しました。');
+      setIsLoggingIn(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
       <div className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-8 w-full max-w-sm text-center">
@@ -112,6 +161,14 @@ function LoginPageInner() {
           <span className="text-sm text-[#3c4043] dark:text-gray-200 font-medium">
             {isLoggingIn ? 'ログイン中...' : 'Googleでログイン'}
           </span>
+        </button>
+
+        <button
+          onClick={handleLoginX}
+          disabled={isLoggingIn}
+          className="mt-3 w-full flex items-center justify-center gap-3 border border-gray-300 dark:border-gray-600 rounded-md bg-black py-2 px-4 hover:shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span className="text-sm text-white font-medium">{isLoggingIn ? 'ログイン中...' : 'Xでログイン'}</span>
         </button>
 
         {error && (

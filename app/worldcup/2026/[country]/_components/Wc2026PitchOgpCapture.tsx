@@ -38,7 +38,7 @@ export function Wc2026PitchOgpCapture(props: {
 
         <div style={{ height: 586, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div
-            className="relative bg-gradient-to-b from-emerald-700/40 to-emerald-900/40"
+            className="relative bg-gradient-to-b from-green-400/75 via-emerald-500/70 to-emerald-900/60"
             style={{
               width: 1200,
               height: 586,
@@ -47,12 +47,13 @@ export function Wc2026PitchOgpCapture(props: {
             }}
           >
             <div
-              className="absolute inset-0 opacity-40"
+              className="absolute inset-0 opacity-18"
               style={{
                 backgroundImage:
                   'repeating-linear-gradient(0deg, rgba(255,255,255,0.0) 0px, rgba(255,255,255,0.0) 22px, rgba(0,0,0,0.14) 22px, rgba(0,0,0,0.14) 44px)',
               }}
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-green-300/20 via-transparent to-transparent" />
             <div className="absolute inset-0">
               <div className="absolute left-[8%] right-[8%] top-[6%] bottom-[6%] border border-white/35 rounded-sm" />
               <div className="absolute left-[8%] right-[8%] top-1/2 -translate-y-1/2 border-t border-white/35" />

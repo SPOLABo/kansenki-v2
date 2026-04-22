@@ -36,15 +36,16 @@ export function Wc2026PitchSection(props: {
           className="rounded-2xl border border-white/10 overflow-hidden bg-black/20"
         >
           <div
-            className="relative w-full bg-gradient-to-b from-emerald-700/40 to-emerald-900/40 aspect-[4/3]"
+            className="relative w-full bg-gradient-to-b from-green-400/75 via-emerald-500/70 to-emerald-900/60 aspect-[4/3]"
           >
             <div
-              className="absolute inset-0 opacity-40"
+              className="absolute inset-0 opacity-18"
               style={{
                 backgroundImage:
                   'repeating-linear-gradient(0deg, rgba(255,255,255,0.0) 0px, rgba(255,255,255,0.0) 22px, rgba(0,0,0,0.14) 22px, rgba(0,0,0,0.14) 44px)',
               }}
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-green-300/20 via-transparent to-transparent" />
             <div className="absolute inset-0">
               <div className="absolute left-[8%] right-[8%] top-[6%] bottom-[6%] border border-white/35 rounded-sm" />
               <div className="absolute left-[8%] right-[8%] top-1/2 -translate-y-1/2 border-t border-white/35" />
