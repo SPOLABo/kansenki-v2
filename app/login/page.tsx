@@ -142,7 +142,7 @@ function LoginPageInner() {
       xRedirectTimeoutRef.current = window.setTimeout(() => {
         setError('Xのログイン画面に遷移できませんでした。FirebaseのTwitterプロバイダ有効化・Authorized domains・Callback URL設定を確認してください。');
         setIsLoggingIn(false);
-      }, 1500);
+      }, 5000);
       await signInWithRedirect(auth, xProvider);
     } catch (error: any) {
       console.error('❌ Xログインエラー:', error);
@@ -187,6 +187,21 @@ function LoginPageInner() {
         >
           <span className="text-sm text-white font-medium">{isLoggingIn ? 'ログイン中...' : 'Xでログイン'}</span>
         </button>
+
+        {isLoggingIn && (
+          <button
+            onClick={() => {
+              if (xRedirectTimeoutRef.current) {
+                window.clearTimeout(xRedirectTimeoutRef.current);
+                xRedirectTimeoutRef.current = null;
+              }
+              setIsLoggingIn(false);
+            }}
+            className="mt-2 text-xs text-gray-600 dark:text-gray-300 hover:underline"
+          >
+            キャンセル
+          </button>
+        )}
 
         {error && (
           <button
