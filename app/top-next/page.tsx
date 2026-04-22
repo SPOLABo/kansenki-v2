@@ -13,7 +13,7 @@ export default function TopNextPage() {
       },
       {
         id: 'event-2',
-        thumbnailSrc: '/選考予想OGP.png',
+        thumbnailSrc: '/欧州圏争い.png',
       },
       {
         id: 'event-3',
