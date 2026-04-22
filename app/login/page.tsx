@@ -6,7 +6,7 @@ import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
 export default function LoginPage() {
   return (
@@ -32,6 +32,7 @@ function LoginPageInner() {
   const [error, setError] = useState<string | null>(null);
   const provider = new GoogleAuthProvider();
   const xProvider = new TwitterAuthProvider();
+  const xRedirectTimeoutRef = useRef<number | null>(null);
   useTheme();
 
 
@@ -101,6 +102,10 @@ function LoginPageInner() {
         if (!result?.user) return;
         if (cancelled) return;
         setIsLoggingIn(true);
+        if (xRedirectTimeoutRef.current) {
+          window.clearTimeout(xRedirectTimeoutRef.current);
+          xRedirectTimeoutRef.current = null;
+        }
         await createUserProfile(result.user);
         redirectToNextPath();
       } catch (e: any) {
@@ -117,6 +122,10 @@ function LoginPageInner() {
     run();
     return () => {
       cancelled = true;
+      if (xRedirectTimeoutRef.current) {
+        window.clearTimeout(xRedirectTimeoutRef.current);
+        xRedirectTimeoutRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -126,6 +135,14 @@ function LoginPageInner() {
     setIsLoggingIn(true);
     setError(null);
     try {
+      console.log('🐦 Xログイン: click');
+      if (xRedirectTimeoutRef.current) {
+        window.clearTimeout(xRedirectTimeoutRef.current);
+      }
+      xRedirectTimeoutRef.current = window.setTimeout(() => {
+        setError('Xのログイン画面に遷移できませんでした。FirebaseのTwitterプロバイダ有効化・Authorized domains・Callback URL設定を確認してください。');
+        setIsLoggingIn(false);
+      }, 1500);
       await signInWithRedirect(auth, xProvider);
     } catch (error: any) {
       console.error('❌ Xログインエラー:', error);
