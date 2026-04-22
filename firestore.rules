@@ -106,7 +106,8 @@ service cloud.firestore {
 
     match /plFinalTablePredictionShares/{shareId} {
       allow read: if true;
-      allow create: if request.resource.data.keys().hasOnly(['schemaVersion', 'eventId', 'snapshotJson', 'createdAt'])
+      allow create: if (request.resource.data.keys().hasOnly(['schemaVersion', 'eventId', 'snapshotJson', 'createdAt'])
+                      || request.resource.data.keys().hasOnly(['schemaVersion', 'eventId', 'snapshotJson']))
                     && request.resource.data.schemaVersion == 1
                     && request.resource.data.eventId == 'premier-league-final-table'
                     && request.resource.data.snapshotJson is string

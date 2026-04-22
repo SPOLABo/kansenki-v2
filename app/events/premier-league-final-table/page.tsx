@@ -193,7 +193,9 @@ export default function PremierLeagueFinalTableEventPage() {
       window.open(webIntentUrl, '_blank', 'noopener,noreferrer');
     } catch (e: any) {
       const msg = typeof e?.message === 'string' ? e.message : '';
-      setShareError(`共有の保存に失敗しました${msg ? `：${msg}` : ''}`);
+      const projectId = (db as any)?.app?.options?.projectId;
+      const projectSuffix = typeof projectId === 'string' && projectId ? ` (project: ${projectId})` : '';
+      setShareError(`共有の保存に失敗しました${msg ? `：${msg}` : ''}${projectSuffix}`);
     } finally {
       setSharing(false);
     }
