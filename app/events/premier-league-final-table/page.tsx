@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { premierLeagueClubs } from '@/lib/clubMaster';
 import { manualFixtures } from '@/lib/fixtures/manualFixtures';
 
@@ -13,6 +14,22 @@ type ClubRow = {
 
 const STORAGE_KEY = 'pl_final_table_prediction_v1';
 const DISPLAY_RANK_COUNT = 7;
+
+function serializeSelection(selectedByRank: (string | null)[]) {
+  const payload = selectedByRank.slice(0, DISPLAY_RANK_COUNT).map((x) => (typeof x === 'string' ? x : '-')).join(',');
+  return encodeURIComponent(payload);
+}
+
+function deserializeSelection(raw: string, clubs: ClubRow[]) {
+  const known = new Set(clubs.map((c) => c.id));
+  const decoded = decodeURIComponent(raw);
+  const parts = decoded.split(',').slice(0, DISPLAY_RANK_COUNT);
+  const normalized = parts.map((x) => (typeof x === 'string' && known.has(x) ? x : null));
+  return [
+    ...normalized,
+    ...Array.from({ length: Math.max(0, DISPLAY_RANK_COUNT - normalized.length) }, () => null),
+  ];
+}
 
 const CUT_OFF_ISO = '2026-04-22T00:00:00+09:00';
 
@@ -66,6 +83,7 @@ function normalizeFixtureClubId(id: string) {
 }
 
 export default function PremierLeagueFinalTableEventPage() {
+  const searchParams = useSearchParams();
   const clubs = useMemo<ClubRow[]>(() => {
     return Object.values(premierLeagueClubs)
       .map((c) => ({ id: c.id, nameJa: c.nameJa, logoSrc: c.logoSrc }))
@@ -74,6 +92,18 @@ export default function PremierLeagueFinalTableEventPage() {
 
   const [selectedByRank, setSelectedByRank] = useState<(string | null)[]>(() => Array.from({ length: DISPLAY_RANK_COUNT }, () => null));
   const [activeRankIndex, setActiveRankIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    try {
+      const s = searchParams?.get('s');
+      if (!s) return;
+      const restored = deserializeSelection(s, clubs);
+      setSelectedByRank(restored);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+    } catch {
+      // ignore
+    }
+  }, [clubs, searchParams]);
 
   useEffect(() => {
     try {
@@ -162,7 +192,8 @@ export default function PremierLeagueFinalTableEventPage() {
     if (typeof window === 'undefined') return;
     try {
       const origin = window.location.origin;
-      const sharePageUrl = `${origin}/events/premier-league-final-table`;
+      const s = serializeSelection(selectedByRank);
+      const sharePageUrl = `${origin}/events/premier-league-final-table?s=${s}`;
       const text = encodeURIComponent('Premier League 最終順位予想');
       const encodedUrl = encodeURIComponent(sharePageUrl);
       const hashtags = encodeURIComponent('プレミアリーグ,PL,スポカレ');
