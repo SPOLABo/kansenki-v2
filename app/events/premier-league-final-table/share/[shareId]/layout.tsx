@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props, _parent: ResolvingMeta
 
   const baseUrl = getBaseUrlFromHeaders();
   const pageUrl = `${baseUrl}/events/premier-league-final-table/share/${encodeURIComponent(shareId)}`;
-  const fallbackImageUrl = `${baseUrl}/footballtop-logo-13.png`;
+  const fallbackImageUrl = `${baseUrl}/${encodeURIComponent('小見出しを追加 (2).png')}`;
 
   const fallbackTitle = 'Premier League 最終順位予想';
 
