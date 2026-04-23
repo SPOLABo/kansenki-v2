@@ -12,12 +12,12 @@ export default function TopNextPage() {
     () => [
       {
         id: 'event-1',
-        href: '/events',
+        href: '/worldcup/2026',
         thumbnailSrc: '/選考予想OGP.png',
       },
       {
         id: 'event-2',
-        href: '/events',
+        href: '/events/premier-league-final-table',
         thumbnailSrc: '/小見出しを追加 (2).png',
       },
       {

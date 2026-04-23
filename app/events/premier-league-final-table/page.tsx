@@ -232,7 +232,7 @@ export default function PremierLeagueFinalTableEventPage() {
   };
 
   return (
-    <main className="min-h-screen bg-black">
+    <main className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900">
       <div className="mx-auto max-w-3xl px-4 py-6">
         <Suspense fallback={null}>
           <SearchParamRestore clubs={clubs} onRestore={setSelectedByRank} />
