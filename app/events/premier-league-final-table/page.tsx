@@ -234,7 +234,17 @@ export default function PremierLeagueFinalTableEventPage() {
       const origin = window.location.origin;
       const shareId = randomShareId();
 
-      await setDoc(
+      const title = 'Premier League 最終順位予想';
+      const rawHashtags = 'プレミアリーグ,PL,スポカレ';
+
+      const canNativeShare = typeof navigator !== 'undefined' && 'share' in navigator;
+      const popup = canNativeShare ? null : window.open('about:blank', '_blank');
+
+      const url = `${origin}/events/premier-league-final-table/share/${encodeURIComponent(shareId)}`;
+      const hashtags = encodeURIComponent(rawHashtags);
+      const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}&hashtags=${hashtags}`;
+
+      const savePromise = setDoc(
         doc(db, 'plFinalTablePredictionShares', shareId),
         {
           schemaVersion: 1,
@@ -247,12 +257,53 @@ export default function PremierLeagueFinalTableEventPage() {
         { merge: false }
       );
 
-      const sharePageUrl = `${origin}/events/premier-league-final-table/share/${encodeURIComponent(shareId)}`;
-      const text = encodeURIComponent('Premier League 最終順位予想');
-      const encodedUrl = encodeURIComponent(sharePageUrl);
-      const hashtags = encodeURIComponent('プレミアリーグ,PL,スポカレ');
-      const webIntentUrl = `https://x.com/intent/tweet?text=${text}&url=${encodedUrl}&hashtags=${hashtags}`;
-      window.open(webIntentUrl, '_blank', 'noopener,noreferrer');
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+      const isIOS = /iP(hone|od|ad)/.test(ua);
+      const hashtagText = rawHashtags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .map((t) => `#${t}`)
+        .join(' ');
+      const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}\n\n${hashtagText}`)}`;
+
+      if (isIOS) {
+        void savePromise.catch(() => {
+          return;
+        });
+
+        const startedAt = Date.now();
+        window.location.href = appUrl;
+        window.setTimeout(() => {
+          const stillHere = document.visibilityState === 'visible' && Date.now() - startedAt >= 700;
+          if (!stillHere) return;
+          if (popup) {
+            popup.location.href = shareUrl;
+          } else {
+            const opened = window.open(shareUrl, '_blank');
+            if (!opened) window.location.href = shareUrl;
+          }
+        }, 800);
+        return;
+      }
+
+      await savePromise;
+
+      if (canNativeShare) {
+        try {
+          await (navigator as any).share({ title, text: title, url });
+          return;
+        } catch {
+          // fallback
+        }
+      }
+
+      if (popup) {
+        popup.location.href = shareUrl;
+      } else {
+        const opened = window.open(shareUrl, '_blank');
+        if (!opened) window.location.href = shareUrl;
+      }
     } catch {
       // ignore
     }
