@@ -13,6 +13,7 @@
    limit,
    query,
    getCountFromServer,
+   where,
  } from 'firebase/firestore';
  import { useAuth } from '@/contexts/AuthContext';
  import { db } from '@/lib/firebase';
@@ -59,6 +60,7 @@ export default function TopNextPage() {
   const [participantsByEventId, setParticipantsByEventId] = useState<Record<string, Participant[]>>({});
   const [participantCountByEventId, setParticipantCountByEventId] = useState<Record<string, number>>({});
   const [joinedByEventId, setJoinedByEventId] = useState<Record<string, boolean>>({});
+  const [wcJapanVoteCount, setWcJapanVoteCount] = useState<number>(0);
 
   const refreshEventCount = async (eventId: string) => {
     try {
@@ -74,6 +76,15 @@ export default function TopNextPage() {
     const aborted = { value: false };
 
     const fetchCounts = async () => {
+      try {
+        const c = await getCountFromServer(
+          query(collection(db, 'wc2026PublicSquadPredictions'), where('countrySlug', '==', 'japan'))
+        );
+        if (!aborted.value) setWcJapanVoteCount(c.data().count);
+      } catch {
+        if (!aborted.value) setWcJapanVoteCount(0);
+      }
+
       for (const ev of events) {
         if (ev.id === 'event-4') continue;
         try {
@@ -226,9 +237,7 @@ export default function TopNextPage() {
             const participantCount = participantCountByEventId[ev.id] ?? 0;
             const displayParticipantCount = ev.id === 'event-4' ? 42 : participantCount;
             const participantCountText =
-              ev.id === 'event-4'
-                ? `${displayParticipantCount}名のユーザーが投稿`
-                : `${displayParticipantCount}名のユーザーが参加中`;
+              `${ev.id === 'event-1' ? wcJapanVoteCount : displayParticipantCount}名のユーザーが参加中`;
 
             return (
               <div

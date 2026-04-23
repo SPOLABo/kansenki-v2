@@ -71,26 +71,33 @@ const contenderClubIds = [
 
 const pointsByClubId: Record<string, number> = {
   ars: 70,
-  mc: 67,
+  mc: 70,
   mu: 58,
   avl: 58,
   liv: 55,
   bha: 50,
   che: 48,
   bre: 48,
-  bou: 48,
+  bou: 49,
   eve: 47,
   sun: 46,
   ful: 45,
   cry: 43,
   new: 42,
-  lee: 39,
+  lee: 40,
   nfo: 36,
 };
 
 const fixtureClubIdAliases: Record<string, string> = {
   mci: 'mc',
   mun: 'mu',
+};
+
+const tiebreakRankByClubId: Record<string, number> = {
+  mc: 1,
+  ars: 2,
+  mu: 3,
+  avl: 4,
 };
 
 function normalizeFixtureClubId(id: string) {
@@ -162,8 +169,12 @@ export default function PremierLeagueFinalTableEventPage() {
     for (const f of upcomingPl) {
       const home = f.homeClubId;
       const away = f.awayClubId;
-      if (clubById.has(home) && clubById.has(away) && contendersSet.has(home) && contendersSet.has(away)) {
+      if (!clubById.has(home) || !clubById.has(away)) continue;
+
+      if (contendersSet.has(home)) {
         map.set(home, [...(map.get(home) ?? []), away]);
+      }
+      if (contendersSet.has(away)) {
         map.set(away, [...(map.get(away) ?? []), home]);
       }
     }
@@ -182,6 +193,11 @@ export default function PremierLeagueFinalTableEventPage() {
         const ap = typeof a.points === 'number' ? a.points : -1;
         const bp = typeof b.points === 'number' ? b.points : -1;
         if (bp !== ap) return bp - ap;
+
+        const at = tiebreakRankByClubId[a.id] ?? Number.POSITIVE_INFINITY;
+        const bt = tiebreakRankByClubId[b.id] ?? Number.POSITIVE_INFINITY;
+        if (at !== bt) return at - bt;
+
         return a.nameJa.localeCompare(b.nameJa, 'ja');
       });
   }, [clubs, contendersSet, upcomingOpponentsByClubId]);
@@ -247,7 +263,7 @@ export default function PremierLeagueFinalTableEventPage() {
         <div className="mb-5">
           <div className="text-xs font-semibold tracking-widest text-white/60">EVENT</div>
           <h1 className="mt-1 text-xl font-bold text-white">Premier League 最終順位予想</h1>
-          <p className="mt-2 text-sm text-white/70">順位をタップしてクラブを選び、最終順位を予想してください（端末に保存されます）。</p>
+          <p className="mt-2 text-sm text-white/70">順位をタップしてクラブを選び、最終順位を予想してください。</p>
         </div>
 
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -356,11 +372,11 @@ export default function PremierLeagueFinalTableEventPage() {
             />
             <div className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-hidden rounded-t-3xl border-t border-white/10 bg-black">
               <div className="flex items-center justify-between px-5 py-4">
-                <div className="text-sm font-bold text-white">クラブを選択（4/22時点）</div>
+                <div className="text-sm font-bold text-white">クラブを選択（4/24時点）</div>
                 <button
                   type="button"
                   onClick={() => setActiveRankIndex(null)}
-                  className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15"
+                  className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/15"
                 >
                   閉じる
                 </button>
@@ -434,7 +450,7 @@ export default function PremierLeagueFinalTableEventPage() {
           </div>
         ) : null}
 
-        <div className="mt-6 text-xs text-white/50">※ 予想の保存はローカル保存（端末内）です。後でログイン連携にできます。</div>
+        <div className="mt-6 text-xs text-white/50">※ チームの成績は更新状況により最新の成績と異なる場合があります。</div>
       </div>
     </main>
   );
