@@ -3,21 +3,32 @@
  import Image from 'next/image';
  import Link from 'next/link';
  import { useMemo, useState } from 'react';
+ import { useAuth } from '@/contexts/AuthContext';
 
 export default function TopNextPage() {
+  const { user, userProfile } = useAuth();
+
   const events = useMemo(
     () => [
       {
         id: 'event-1',
+        href: '/events',
         thumbnailSrc: '/選考予想OGP.png',
       },
       {
         id: 'event-2',
+        href: '/events',
         thumbnailSrc: '/小見出しを追加 (2).png',
       },
       {
         id: 'event-3',
+        href: '/events',
         thumbnailSrc: '/小見出しを追加 (3).png',
+      },
+      {
+        id: 'event-4',
+        href: '/',
+        thumbnailSrc: '/観戦記ポップ.png',
       },
     ],
     []
@@ -32,9 +43,11 @@ export default function TopNextPage() {
           {events.map((ev) => {
             const joined = Boolean(joinedById[ev.id]);
 
+            const myAvatarUrl = userProfile?.avatarUrl || user?.photoURL || null;
+
             const participants = joined
               ? [
-                  { id: 'me', label: 'You', bgClassName: 'bg-emerald-500' },
+                  { id: 'me', label: 'You', bgClassName: 'bg-emerald-500', avatarUrl: myAvatarUrl },
                   { id: 'p-1', label: 'A', bgClassName: 'bg-blue-500' },
                   { id: 'p-2', label: 'B', bgClassName: 'bg-purple-500' },
                   { id: 'p-3', label: 'C', bgClassName: 'bg-amber-500' },
@@ -51,7 +64,7 @@ export default function TopNextPage() {
                 className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950"
               >
                 <div className="relative">
-                  <Link href="/events" className="block">
+                  <Link href={ev.href} className="block">
                     <div className="relative aspect-[16/9] w-full">
                       <Image
                         src={ev.thumbnailSrc}
@@ -61,6 +74,27 @@ export default function TopNextPage() {
                         className="object-cover"
                         sizes="(max-width: 768px) 100vw, 960px"
                       />
+                      <div className="absolute bottom-3 right-3 flex -space-x-2">
+                        {participants.slice(0, 5).map((p) => (
+                          <div
+                            key={p.id}
+                            className={
+                              `flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-sm dark:border-gray-950 ` +
+                              p.bgClassName
+                            }
+                            aria-label={p.label}
+                            title={p.label}
+                          >
+                            {p.avatarUrl ? (
+                              <div className="relative h-full w-full overflow-hidden rounded-full">
+                                <Image src={p.avatarUrl} alt={p.label} fill className="object-cover" sizes="36px" />
+                              </div>
+                            ) : (
+                              p.label
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </Link>
 
@@ -73,22 +107,7 @@ export default function TopNextPage() {
 
                 <div className="-mt-12 flex items-center justify-between gap-3 px-4 pb-4">
                   <div className="flex items-center">
-                    <div className="flex -space-x-2">
-                      {participants.slice(0, 6).map((p) => (
-                        <div
-                          key={p.id}
-                          className={
-                            `flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white dark:border-gray-950 ` +
-                            p.bgClassName
-                          }
-                          aria-label={p.label}
-                          title={p.label}
-                        >
-                          {p.label}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="ml-3 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">
                       {joined ? 'あなた含め参加中' : '参加者'}
                     </div>
                   </div>

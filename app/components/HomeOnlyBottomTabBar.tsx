@@ -7,6 +7,8 @@ export default function HomeOnlyBottomTabBar() {
   const pathname = usePathname();
 
   const show =
+    pathname === '/top-next' ||
+    pathname.startsWith('/top-next/') ||
     pathname === '/home' ||
     pathname.startsWith('/home/') ||
     pathname === '/timeline' ||
