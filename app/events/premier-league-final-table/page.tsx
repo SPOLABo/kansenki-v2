@@ -237,14 +237,14 @@ export default function PremierLeagueFinalTableEventPage() {
       const shareId = randomShareId();
 
       const title = 'Premier League 最終順位予想';
-      const rawHashtags = 'プレミアリーグ,PL,スポカレ';
+      const hashtagsText = ['#プレミアリーグ', '#スポカレ', '#順位予想', '#欧州圏争い'].join(' ');
 
       const canNativeShare = typeof navigator !== 'undefined' && 'share' in navigator;
       const popup = canNativeShare ? null : window.open('about:blank', '_blank');
 
       const url = `${origin}/events/premier-league-final-table/share/${encodeURIComponent(shareId)}`;
-      const hashtags = encodeURIComponent(rawHashtags);
-      const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}&hashtags=${hashtags}`;
+      const shareText = `${title}\n\n${hashtagsText}`;
+      const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`;
 
       const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
       const isIOS = /iP(hone|od|ad)/.test(ua);
@@ -301,7 +301,7 @@ export default function PremierLeagueFinalTableEventPage() {
         { merge: false }
       );
 
-      const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}\n\n${rawHashtags}`)}`;
+      const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}\n\n${hashtagsText}`)}`;
 
       if (isIOS) {
         void savePromise.catch(() => {
@@ -327,7 +327,7 @@ export default function PremierLeagueFinalTableEventPage() {
 
       if (canNativeShare) {
         try {
-          await (navigator as any).share({ title, text: title, url });
+          await (navigator as any).share({ title, text: shareText, url });
           return;
         } catch {
           // fallback
@@ -376,7 +376,7 @@ export default function PremierLeagueFinalTableEventPage() {
         <div className="fixed left-[-99999px] top-0 h-[630px] w-[1200px] overflow-hidden">
           <div id="pl-final-table-ogp-capture" className="h-[630px] w-[1200px] bg-black px-16 py-14">
             <div className="text-sm font-semibold tracking-widest text-white/60">SHARE</div>
-            <div className="mt-3 text-5xl font-black text-white">Premier League 最終順位予想</div>
+            <div className="mt-3 text-5xl font-black text-white">25/26プレミアリーグ 最終順位予想</div>
             <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
               {selectedByRank.slice(0, 7).map((clubId, index) => {
                 const club = typeof clubId === 'string' ? premierLeagueClubs[clubId as keyof typeof premierLeagueClubs] : null;
@@ -405,7 +405,7 @@ export default function PremierLeagueFinalTableEventPage() {
         </Suspense>
         <div className="mb-5">
           <div className="text-xs font-semibold tracking-widest text-white/60">EVENT</div>
-          <h1 className="mt-1 text-xl font-bold text-white">Premier League 最終順位予想</h1>
+          <h1 className="mt-1 text-xl font-bold text-white">25/26プレミアリーグ 最終順位予想</h1>
           <p className="mt-2 text-sm text-white/70">順位をタップしてクラブを選び、最終順位を予想してください。</p>
         </div>
 
