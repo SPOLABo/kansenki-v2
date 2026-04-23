@@ -2,11 +2,33 @@
 
  import Image from 'next/image';
  import Link from 'next/link';
- import { useMemo, useState } from 'react';
+ import { useMemo, useState, useEffect } from 'react';
+ import {
+   doc,
+   setDoc,
+   serverTimestamp,
+   collection,
+   onSnapshot,
+   orderBy,
+   limit,
+   query,
+   getCountFromServer,
+ } from 'firebase/firestore';
  import { useAuth } from '@/contexts/AuthContext';
+ import { db } from '@/lib/firebase';
+ import { useRouter } from 'next/navigation';
+
+ type Participant = {
+   uid: string;
+   displayName: string | null;
+   avatarUrl: string | null;
+ };
+
+ const KANSENKI_AUTHOR_SAMPLE_LIMIT = 200;
 
 export default function TopNextPage() {
   const { user, userProfile } = useAuth();
+  const router = useRouter();
 
   const events = useMemo(
     () => [
@@ -34,29 +56,179 @@ export default function TopNextPage() {
     []
   );
 
-  const [joinedById, setJoinedById] = useState<Record<string, boolean>>({});
+  const [participantsByEventId, setParticipantsByEventId] = useState<Record<string, Participant[]>>({});
+  const [participantCountByEventId, setParticipantCountByEventId] = useState<Record<string, number>>({});
+  const [joinedByEventId, setJoinedByEventId] = useState<Record<string, boolean>>({});
+
+  const refreshEventCount = async (eventId: string) => {
+    try {
+      const c = await getCountFromServer(collection(db, 'eventParticipants', eventId, 'users'));
+      setParticipantCountByEventId((prev) => ({ ...prev, [eventId]: c.data().count }));
+    } catch {
+      setParticipantCountByEventId((prev) => ({ ...prev, [eventId]: 0 }));
+    }
+  };
+
+  useEffect(() => {
+    const unsubs: Array<() => void> = [];
+    const aborted = { value: false };
+
+    const fetchCounts = async () => {
+      for (const ev of events) {
+        if (ev.id === 'event-4') continue;
+        try {
+          const c = await getCountFromServer(collection(db, 'eventParticipants', ev.id, 'users'));
+          if (aborted.value) return;
+          setParticipantCountByEventId((prev) => ({ ...prev, [ev.id]: c.data().count }));
+        } catch {
+          if (aborted.value) return;
+          setParticipantCountByEventId((prev) => ({ ...prev, [ev.id]: 0 }));
+        }
+      }
+    };
+
+    fetchCounts();
+
+    for (const ev of events) {
+      if (ev.id === 'event-4') {
+        const postQ = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(KANSENKI_AUTHOR_SAMPLE_LIMIT));
+        const simplePostQ = query(collection(db, 'simple-posts'), orderBy('createdAt', 'desc'), limit(KANSENKI_AUTHOR_SAMPLE_LIMIT));
+
+        let latestPostAuthors: Participant[] = [];
+        let latestSimplePostAuthors: Participant[] = [];
+
+        const recompute = () => {
+          const seen = new Set<string>();
+          const merged: Participant[] = [];
+          for (const p of [...latestPostAuthors, ...latestSimplePostAuthors]) {
+            if (!p.uid || seen.has(p.uid)) continue;
+            seen.add(p.uid);
+            merged.push(p);
+            if (merged.length >= 5) break;
+          }
+          setParticipantsByEventId((prev) => ({ ...prev, [ev.id]: merged }));
+          setParticipantCountByEventId((prev) => ({ ...prev, [ev.id]: seen.size }));
+        };
+
+        unsubs.push(
+          onSnapshot(
+            postQ,
+            (snap) => {
+              latestPostAuthors = snap.docs
+                .map((d) => d.data() as any)
+                .map((row) => ({
+                  uid:
+                    typeof row?.authorId === 'string'
+                      ? row.authorId
+                      : typeof row?.userId === 'string'
+                        ? row.userId
+                        : typeof row?.author?.id === 'string'
+                          ? row.author.id
+                          : '',
+                  displayName: typeof row?.authorName === 'string' ? row.authorName : null,
+                  avatarUrl: typeof row?.authorImage === 'string' ? row.authorImage : null,
+                }))
+                .filter((x) => Boolean(x.uid));
+              recompute();
+            },
+            () => {
+              latestPostAuthors = [];
+              recompute();
+            }
+          )
+        );
+
+        unsubs.push(
+          onSnapshot(
+            simplePostQ,
+            (snap) => {
+              latestSimplePostAuthors = snap.docs
+                .map((d) => d.data() as any)
+                .map((row) => ({
+                  uid:
+                    typeof row?.authorId === 'string'
+                      ? row.authorId
+                      : typeof row?.userId === 'string'
+                        ? row.userId
+                        : typeof row?.author?.id === 'string'
+                          ? row.author.id
+                          : '',
+                  displayName: typeof row?.authorName === 'string' ? row.authorName : null,
+                  avatarUrl: typeof row?.authorImage === 'string' ? row.authorImage : null,
+                }))
+                .filter((x) => Boolean(x.uid));
+              recompute();
+            },
+            () => {
+              latestSimplePostAuthors = [];
+              recompute();
+            }
+          )
+        );
+      } else {
+        const q = query(collection(db, 'eventParticipants', ev.id, 'users'), orderBy('joinedAt', 'desc'), limit(5));
+
+        unsubs.push(
+          onSnapshot(
+            q,
+            (snap) => {
+              const next = snap.docs
+                .map((d) => d.data() as any)
+                .map((row) => ({
+                  uid: typeof row?.uid === 'string' ? row.uid : '',
+                  displayName: typeof row?.displayName === 'string' ? row.displayName : null,
+                  avatarUrl: typeof row?.avatarUrl === 'string' ? row.avatarUrl : null,
+                }))
+                .filter((x) => Boolean(x.uid));
+
+              setParticipantsByEventId((prev) => ({ ...prev, [ev.id]: next }));
+              refreshEventCount(ev.id);
+            },
+            () => {
+              setParticipantsByEventId((prev) => ({ ...prev, [ev.id]: [] }));
+              refreshEventCount(ev.id);
+            }
+          )
+        );
+      }
+
+      if (user?.uid) {
+        const myDocRef = doc(db, 'eventParticipants', ev.id, 'users', user.uid);
+        unsubs.push(
+          onSnapshot(
+            myDocRef,
+            (snap) => {
+              setJoinedByEventId((prev) => ({ ...prev, [ev.id]: snap.exists() }));
+            },
+            () => {
+              setJoinedByEventId((prev) => ({ ...prev, [ev.id]: false }));
+            }
+          )
+        );
+      } else {
+        setJoinedByEventId((prev) => ({ ...prev, [ev.id]: false }));
+      }
+    }
+
+    return () => {
+      aborted.value = true;
+      for (const u of unsubs) u();
+    };
+  }, [events, user?.uid]);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-950 dark:to-gray-900">
       <div className="mx-auto max-w-5xl px-4 py-6">
         <div className="flex flex-col gap-4">
           {events.map((ev) => {
-            const joined = Boolean(joinedById[ev.id]);
-
-            const myAvatarUrl = userProfile?.avatarUrl || user?.photoURL || null;
-
-            const participants = joined
-              ? [
-                  { id: 'me', label: 'You', bgClassName: 'bg-emerald-500', avatarUrl: myAvatarUrl },
-                  { id: 'p-1', label: 'A', bgClassName: 'bg-blue-500' },
-                  { id: 'p-2', label: 'B', bgClassName: 'bg-purple-500' },
-                  { id: 'p-3', label: 'C', bgClassName: 'bg-amber-500' },
-                ]
-              : [
-                  { id: 'p-1', label: 'A', bgClassName: 'bg-blue-500' },
-                  { id: 'p-2', label: 'B', bgClassName: 'bg-purple-500' },
-                  { id: 'p-3', label: 'C', bgClassName: 'bg-amber-500' },
-                ];
+            const joined = Boolean(joinedByEventId[ev.id]);
+            const participants = participantsByEventId[ev.id] ?? [];
+            const participantCount = participantCountByEventId[ev.id] ?? 0;
+            const displayParticipantCount = ev.id === 'event-4' ? 42 : participantCount;
+            const participantCountText =
+              ev.id === 'event-4'
+                ? `${displayParticipantCount}名のユーザーが投稿`
+                : `${displayParticipantCount}名のユーザーが参加中`;
 
             return (
               <div
@@ -74,24 +246,20 @@ export default function TopNextPage() {
                         className="object-cover"
                         sizes="(max-width: 768px) 100vw, 960px"
                       />
-                      <div className="absolute bottom-3 right-3 flex -space-x-2">
+                      <div className="absolute bottom-1 left-3 rounded-full bg-black/40 px-2 py-1 text-[10px] font-semibold text-white/90 backdrop-blur">
+                        {participantCountText}
+                      </div>
+                      <div className="absolute bottom-1 right-3 flex -space-x-2">
                         {participants.slice(0, 5).map((p) => (
                           <div
-                            key={p.id}
+                            key={p.uid}
                             className={
-                              `flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-sm dark:border-gray-950 ` +
-                              p.bgClassName
+                              `flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-slate-700 text-xs font-bold text-white shadow-sm dark:border-gray-950 `
                             }
-                            aria-label={p.label}
-                            title={p.label}
+                            aria-label={p.displayName ?? p.uid}
+                            title={p.displayName ?? ''}
                           >
-                            {p.avatarUrl ? (
-                              <div className="relative h-full w-full overflow-hidden rounded-full">
-                                <Image src={p.avatarUrl} alt={p.label} fill className="object-cover" sizes="36px" />
-                              </div>
-                            ) : (
-                              p.label
-                            )}
+                            {p.avatarUrl ? <Image src={p.avatarUrl} alt={p.displayName ?? 'user'} width={36} height={36} className="h-9 w-9 object-cover" /> : (p.displayName?.slice(0, 1) ?? 'U')}
                           </div>
                         ))}
                       </div>
@@ -115,7 +283,31 @@ export default function TopNextPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setJoinedById((prev) => ({ ...prev, [ev.id]: !Boolean(prev[ev.id]) }));
+                      if (!user?.uid) {
+                        router.push('/login');
+                        return;
+                      }
+                      const myAvatarUrl = userProfile?.avatarUrl || user.photoURL || null;
+                      const myDisplayName = userProfile?.nickname || user.displayName || null;
+                      const myDocRef = doc(db, 'eventParticipants', ev.id, 'users', user.uid);
+                      setDoc(
+                        myDocRef,
+                        {
+                          uid: user.uid,
+                          displayName: myDisplayName,
+                          avatarUrl: myAvatarUrl,
+                          joinedAt: serverTimestamp(),
+                        },
+                        { merge: true }
+                      )
+                        .then(() => {
+                          if (ev.id !== 'event-4') {
+                            refreshEventCount(ev.id);
+                          }
+                        })
+                        .catch(() => {
+                          return;
+                        });
                     }}
                     className={
                       'pointer-events-auto rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ' +

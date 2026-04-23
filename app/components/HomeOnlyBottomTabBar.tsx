@@ -9,6 +9,8 @@ export default function HomeOnlyBottomTabBar() {
   const show =
     pathname === '/top-next' ||
     pathname.startsWith('/top-next/') ||
+    pathname === '/worldcup/2026' ||
+    pathname.startsWith('/worldcup/2026/') ||
     pathname === '/home' ||
     pathname.startsWith('/home/') ||
     pathname === '/timeline' ||

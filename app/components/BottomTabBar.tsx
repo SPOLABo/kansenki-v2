@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Ticket, User } from 'lucide-react';
+import { Home, LayoutGrid, Ticket, User } from 'lucide-react';
 import type { ComponentType } from 'react';
 
 type TabItem = {
@@ -14,6 +14,7 @@ type TabItem = {
 
 const tabs: TabItem[] = [
   { label: '新着', href: '/top-next', icon: Home },
+  { label: 'タイムライン', href: '/timeline', icon: LayoutGrid },
   { label: '試合', href: 'https://spocale.com/#google_vignette', icon: Ticket, external: true },
   { label: 'マイページ', href: '/mypage', icon: User },
 ];
@@ -23,7 +24,7 @@ export default function BottomTabBar() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-slate-950/80 backdrop-blur">
-      <div className="mx-auto grid max-w-xl grid-cols-3 px-2 py-2">
+      <div className="mx-auto grid max-w-xl grid-cols-4 px-2 py-2">
         {tabs.map((t) => {
           const active =
             !t.external && (pathname === t.href || (t.href !== '/' && pathname?.startsWith(`${t.href}/`)));
