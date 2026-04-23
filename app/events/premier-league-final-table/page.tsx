@@ -4,9 +4,11 @@ import Image from 'next/image';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadString } from 'firebase/storage';
+import { toPng } from 'html-to-image';
 import { premierLeagueClubs } from '@/lib/clubMaster';
 import { manualFixtures } from '@/lib/fixtures/manualFixtures';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
 type ClubRow = {
@@ -244,28 +246,62 @@ export default function PremierLeagueFinalTableEventPage() {
       const hashtags = encodeURIComponent(rawHashtags);
       const shareUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}&hashtags=${hashtags}`;
 
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+      const isIOS = /iP(hone|od|ad)/.test(ua);
+
+      let ogImageUrl: string | null = null;
+      try {
+        const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+        if (!isLocalhost && !isIOS) {
+          const el = document.getElementById('pl-final-table-ogp-capture');
+          if (el) {
+            const dataUrl = await toPng(el, {
+              cacheBust: true,
+              pixelRatio: 1,
+              width: 1200,
+              height: 630,
+              backgroundColor: '#000000',
+              style: {
+                opacity: '1',
+                transform: 'none',
+              },
+              onClone: (doc: Document) => {
+                try {
+                  const cloned = doc.getElementById('pl-final-table-ogp-capture') as HTMLElement | null;
+                  if (!cloned) return;
+                  cloned.style.opacity = '1';
+                  cloned.style.transform = 'none';
+                  cloned.style.left = '0px';
+                  cloned.style.top = '0px';
+                  cloned.style.zIndex = '0';
+                } catch {
+                  return;
+                }
+              },
+            } as any);
+            const objectRef = ref(storage, `plFinalTablePredictionShareOgp/${shareId}.png`);
+            await uploadString(objectRef, dataUrl, 'data_url');
+            ogImageUrl = await getDownloadURL(objectRef);
+          }
+        }
+      } catch {
+        ogImageUrl = null;
+      }
+
       const savePromise = setDoc(
         doc(db, 'plFinalTablePredictionShares', shareId),
         {
           schemaVersion: 1,
           eventId: 'premier-league-final-table',
           snapshotJson: JSON.stringify({ selectedByRank }),
-          ogImageUrl: null,
+          ogImageUrl,
           createdByUid: user.uid,
           createdAt: serverTimestamp(),
         },
         { merge: false }
       );
 
-      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-      const isIOS = /iP(hone|od|ad)/.test(ua);
-      const hashtagText = rawHashtags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .map((t) => `#${t}`)
-        .join(' ');
-      const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}\n\n${hashtagText}`)}`;
+      const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}\n\n${rawHashtags}`)}`;
 
       if (isIOS) {
         void savePromise.catch(() => {
@@ -335,15 +371,35 @@ export default function PremierLeagueFinalTableEventPage() {
   };
 
   return (
-    <main
-      className="min-h-screen"
-      style={{
-        backgroundColor: '#030014',
-        backgroundImage:
-          'radial-gradient(1000px circle at 50% -10%, rgba(168,85,247,0.32), transparent 55%), radial-gradient(900px circle at 50% 45%, rgba(168,85,247,0.20), transparent 60%), radial-gradient(800px circle at 80% 20%, rgba(236,72,153,0.18), transparent 55%), radial-gradient(1200px circle at 50% 120%, rgba(99,102,241,0.26), transparent 65%), linear-gradient(180deg, rgba(3,0,20,1) 0%, rgba(10,7,26,1) 55%, rgba(3,0,20,1) 100%)',
-      }}
-    >
+    <main className="min-h-screen bg-black">
       <div className="mx-auto max-w-3xl px-4 py-6">
+        <div className="fixed left-[-99999px] top-0 h-[630px] w-[1200px] overflow-hidden">
+          <div id="pl-final-table-ogp-capture" className="h-[630px] w-[1200px] bg-black px-16 py-14">
+            <div className="text-sm font-semibold tracking-widest text-white/60">SHARE</div>
+            <div className="mt-3 text-5xl font-black text-white">Premier League 最終順位予想</div>
+            <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+              {selectedByRank.slice(0, 7).map((clubId, index) => {
+                const club = typeof clubId === 'string' ? premierLeagueClubs[clubId as keyof typeof premierLeagueClubs] : null;
+                return (
+                  <div key={`${index}-${clubId ?? 'empty'}`} className={'flex items-center gap-5 px-8 py-5 ' + (index === 0 ? '' : 'border-t border-white/10')}>
+                    <div className="w-14 text-center text-3xl font-black text-white/80">{index + 1}</div>
+                    {club ? (
+                      <>
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white">
+                          <Image src={club.logoSrc} alt={club.nameJa} fill className="object-contain p-2" sizes="64px" />
+                        </div>
+                        <div className="truncate text-3xl font-extrabold text-white">{club.nameJa}</div>
+                      </>
+                    ) : (
+                      <div className="text-3xl font-extrabold text-white/30">未選択</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-8 text-xl font-semibold text-white/70">kansenki.footballtop.net</div>
+          </div>
+        </div>
         <Suspense fallback={null}>
           <SearchParamRestore clubs={clubs} onRestore={setSelectedByRank} />
         </Suspense>
