@@ -232,7 +232,14 @@ export default function PremierLeagueFinalTableEventPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900">
+    <main
+      className="min-h-screen"
+      style={{
+        backgroundColor: '#030014',
+        backgroundImage:
+          'radial-gradient(1000px circle at 50% -10%, rgba(168,85,247,0.32), transparent 55%), radial-gradient(900px circle at 50% 45%, rgba(168,85,247,0.20), transparent 60%), radial-gradient(800px circle at 80% 20%, rgba(236,72,153,0.18), transparent 55%), radial-gradient(1200px circle at 50% 120%, rgba(99,102,241,0.26), transparent 65%), linear-gradient(180deg, rgba(3,0,20,1) 0%, rgba(10,7,26,1) 55%, rgba(3,0,20,1) 100%)',
+      }}
+    >
       <div className="mx-auto max-w-3xl px-4 py-6">
         <Suspense fallback={null}>
           <SearchParamRestore clubs={clubs} onRestore={setSelectedByRank} />
