@@ -3,8 +3,11 @@
 import Image from 'next/image';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { premierLeagueClubs } from '@/lib/clubMaster';
 import { manualFixtures } from '@/lib/fixtures/manualFixtures';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ClubRow = {
   id: string;
@@ -14,6 +17,19 @@ type ClubRow = {
 
 const STORAGE_KEY = 'pl_final_table_prediction_v1';
 const DISPLAY_RANK_COUNT = 7;
+
+function randomShareId() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const bytes = new Uint8Array(16);
+  if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 1) out += chars[bytes[i] % chars.length];
+  return out;
+}
 
 function serializeSelection(selectedByRank: (string | null)[]) {
   const payload = selectedByRank.slice(0, DISPLAY_RANK_COUNT).map((x) => (typeof x === 'string' ? x : '-')).join(',');
@@ -105,6 +121,8 @@ function normalizeFixtureClubId(id: string) {
 }
 
 export default function PremierLeagueFinalTableEventPage() {
+  const { user } = useAuth();
+
   const clubs = useMemo<ClubRow[]>(() => {
     return Object.values(premierLeagueClubs)
       .map((c) => ({ id: c.id, nameJa: c.nameJa, logoSrc: c.logoSrc }))
@@ -208,10 +226,28 @@ export default function PremierLeagueFinalTableEventPage() {
 
   const sharePrediction = async () => {
     if (typeof window === 'undefined') return;
+    if (!user?.uid) {
+      window.location.href = `/login?redirect=${encodeURIComponent('/events/premier-league-final-table')}`;
+      return;
+    }
     try {
       const origin = window.location.origin;
-      const s = serializeSelection(selectedByRank);
-      const sharePageUrl = `${origin}/events/premier-league-final-table?s=${encodeURIComponent(s)}`;
+      const shareId = randomShareId();
+
+      await setDoc(
+        doc(db, 'plFinalTablePredictionShares', shareId),
+        {
+          schemaVersion: 1,
+          eventId: 'premier-league-final-table',
+          snapshotJson: JSON.stringify({ selectedByRank }),
+          ogImageUrl: null,
+          createdByUid: user.uid,
+          createdAt: serverTimestamp(),
+        },
+        { merge: false }
+      );
+
+      const sharePageUrl = `${origin}/events/premier-league-final-table/share/${encodeURIComponent(shareId)}`;
       const text = encodeURIComponent('Premier League 最終順位予想');
       const encodedUrl = encodeURIComponent(sharePageUrl);
       const hashtags = encodeURIComponent('プレミアリーグ,PL,スポカレ');
