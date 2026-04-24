@@ -112,7 +112,7 @@ export default function MenuDrawer() {
         }
       >
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <Link href="/" className="cursor-pointer">
+          <div className="cursor-default">
             {isWc2026 || isTopNext || isEventsPath ? (
               <Image
                 src="/スポカレロゴ.png"
@@ -149,7 +149,7 @@ export default function MenuDrawer() {
                 </div>
               </>
             )}
-          </Link>
+          </div>
         </div>
 
         <div className="absolute right-4 top-1/2 -translate-y-1/2">

@@ -158,6 +158,16 @@ function LoginPageInner() {
         <h1 className="text-2xl font-bold mb-4 dark:text-white">ログイン</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Googleアカウントでログインしてください</p>
 
+        {false ? (
+          <button
+            onClick={handleLoginX}
+            disabled={isLoggingIn}
+            className="mt-3 w-full flex items-center justify-center gap-3 border border-gray-300 dark:border-gray-600 rounded-md bg-black py-2 px-4 hover:shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="text-sm text-white font-medium">{isLoggingIn ? 'ログイン中...' : 'Xでログイン'}</span>
+          </button>
+        ) : null}
+
         {error && (
           <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-md text-red-700 dark:text-red-300 text-sm">
             {error}
@@ -178,14 +188,6 @@ function LoginPageInner() {
           <span className="text-sm text-[#3c4043] dark:text-gray-200 font-medium">
             {isLoggingIn ? 'ログイン中...' : 'Googleでログイン'}
           </span>
-        </button>
-
-        <button
-          onClick={handleLoginX}
-          disabled={isLoggingIn}
-          className="mt-3 w-full flex items-center justify-center gap-3 border border-gray-300 dark:border-gray-600 rounded-md bg-black py-2 px-4 hover:shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span className="text-sm text-white font-medium">{isLoggingIn ? 'ログイン中...' : 'Xでログイン'}</span>
         </button>
 
         {isLoggingIn && (
