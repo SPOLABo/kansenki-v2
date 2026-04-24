@@ -39,6 +39,7 @@ export default function PremierLeagueFinalTableSharePage() {
 
   const [aggregateLoading, setAggregateLoading] = useState(true);
   const [rankTopVotes, setRankTopVotes] = useState<RankVoteRow[][]>(() => Array.from({ length: DISPLAY_RANK_COUNT }, () => []));
+  const [aggregateParticipantCount, setAggregateParticipantCount] = useState<number>(0);
 
   useEffect(() => {
     if (!shareId) return;
@@ -92,10 +93,16 @@ export default function PremierLeagueFinalTableSharePage() {
         const q = query(collection(db, 'plFinalTablePredictionShares'), orderBy('createdAt', 'desc'), limit(AGGREGATE_SAMPLE_LIMIT));
         const snaps = await getDocs(q);
 
+        const userIds = new Set<string>();
+
         const countsByRank: Map<string, number>[] = Array.from({ length: DISPLAY_RANK_COUNT }, () => new Map());
 
         snaps.forEach((snap) => {
           const data = snap.data() as any;
+
+          const createdByUid = typeof data?.createdByUid === 'string' ? data.createdByUid : '';
+          if (createdByUid) userIds.add(createdByUid);
+
           const raw = typeof data?.snapshotJson === 'string' ? data.snapshotJson : '';
           if (!raw) return;
           let parsed: any;
@@ -121,9 +128,15 @@ export default function PremierLeagueFinalTableSharePage() {
             .slice(0, 5);
         });
 
-        if (!cancelled) setRankTopVotes(topVotes);
+        if (!cancelled) {
+          setRankTopVotes(topVotes);
+          setAggregateParticipantCount(userIds.size);
+        }
       } catch {
-        if (!cancelled) setRankTopVotes(Array.from({ length: DISPLAY_RANK_COUNT }, () => []));
+        if (!cancelled) {
+          setRankTopVotes(Array.from({ length: DISPLAY_RANK_COUNT }, () => []));
+          setAggregateParticipantCount(0);
+        }
       } finally {
         if (!cancelled) setAggregateLoading(false);
       }
@@ -176,7 +189,12 @@ export default function PremierLeagueFinalTableSharePage() {
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
               <div className="border-b border-white/10 px-4 py-3">
                 <div className="text-sm font-bold text-white">みんなの予想（直近{AGGREGATE_SAMPLE_LIMIT}件）</div>
-                <div className="mt-1 text-xs font-semibold text-white/50">各順位で多く選ばれているクラブ</div>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <div className="text-xs font-semibold text-white/50">各順位で多く選ばれているクラブ</div>
+                  {!aggregateLoading ? (
+                    <div className="text-xs font-semibold text-white/70">{aggregateParticipantCount}名のユーザーが参加中</div>
+                  ) : null}
+                </div>
               </div>
 
               {aggregateLoading ? <div className="px-4 py-4 text-sm font-semibold text-white/60">集計中…</div> : null}
