@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { toPng } from 'html-to-image';
+import { collection, getDocs, limit, orderBy, query, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/firebase';
 import { getWc2026CountryBySlug } from '@/lib/worldcup/wc2026Countries';
 import { WC2026_CANDIDATES_BY_COUNTRY } from '@/lib/worldcup/wc2026Candidates';
 import type { SquadPlayerPrediction, SquadPosition, SquadStatus } from '@/types/worldcup';
@@ -23,6 +25,164 @@ import { Wc2026SquadTableSection } from './_components/Wc2026SquadTableSection';
 import { Wc2026PitchOgpCapture } from './_components/Wc2026PitchOgpCapture';
 import { useWc2026PredictionDoc } from './_hooks/useWc2026PredictionDoc';
 import { useWc2026Share } from './_hooks/useWc2026Share';
+
+type FormationSlotKeySimple = 'GK' | 'LCB' | 'CB' | 'RCB' | 'LM' | 'LCM' | 'RCM' | 'RM' | 'SS_L' | 'SS_R' | 'ST';
+const SLOT_ORDER_SIMPLE: FormationSlotKeySimple[] = ['GK', 'LCB', 'CB', 'RCB', 'LM', 'LCM', 'RCM', 'RM', 'SS_L', 'SS_R', 'ST'];
+
+const SLOT_LABEL_SIMPLE: Record<FormationSlotKeySimple, string> = {
+  GK: 'GK',
+  LCB: 'LCB',
+  CB: 'CB',
+  RCB: 'RCB',
+  LM: 'LM',
+  LCM: 'LCM',
+  RCM: 'RCM',
+  RM: 'RM',
+  SS_L: 'SS',
+  SS_R: 'SS',
+  ST: 'CF',
+};
+
+function escapeXml(s: string) {
+  return s
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
+}
+
+function surnameOnly(name: string) {
+  const parts = name.split(/[\s　]+/).filter(Boolean);
+  if (parts.length >= 2) return parts[0];
+  return name;
+}
+
+function svgDataUrl(svg: string) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function buildJapanPopularSvg(args: {
+  popularBySlot: Partial<Record<FormationSlotKeySimple, { id: string; name: string; votes: number }>>;
+  sampleCount: number;
+}) {
+  const { popularBySlot, sampleCount } = args;
+
+  const W = 1200;
+  const H = 630;
+
+  const pos: Record<FormationSlotKeySimple, { x: number; y: number }> = {
+    GK: { x: 120, y: 315 },
+    LCB: { x: 300, y: 200 },
+    CB: { x: 300, y: 315 },
+    RCB: { x: 300, y: 430 },
+    LM: { x: 520, y: 160 },
+    LCM: { x: 520, y: 270 },
+    RCM: { x: 520, y: 360 },
+    RM: { x: 520, y: 470 },
+    SS_L: { x: 760, y: 270 },
+    SS_R: { x: 760, y: 360 },
+    ST: { x: 970, y: 315 },
+  };
+
+  const nodes = SLOT_ORDER_SIMPLE.map((slot) => {
+    const p = popularBySlot[slot];
+    if (!p) return '';
+    const { x, y } = pos[slot];
+    const name = escapeXml(surnameOnly(p.name));
+    const votes = escapeXml(`${p.votes}票`);
+    const label = escapeXml(SLOT_LABEL_SIMPLE[slot]);
+
+    return `
+      <g>
+        <circle cx="${x}" cy="${y}" r="44" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" stroke-width="2" />
+        <text x="${x}" y="${y - 28}" text-anchor="middle" font-size="16" font-weight="700" fill="rgba(255,255,255,0.75)">${label}</text>
+        <text x="${x}" y="${y + 6}" text-anchor="middle" font-size="20" font-weight="800" fill="rgba(255,255,255,0.95)">${name}</text>
+        <text x="${x}" y="${y + 30}" text-anchor="middle" font-size="14" font-weight="700" fill="rgba(255,255,255,0.70)">${votes}</text>
+      </g>
+    `;
+  }).join('');
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+  <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#020617" />
+        <stop offset="1" stop-color="#0b1533" />
+      </linearGradient>
+      <linearGradient id="pitch" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0ea5e9" stop-opacity="0.25" />
+        <stop offset="1" stop-color="#22c55e" stop-opacity="0.18" />
+      </linearGradient>
+    </defs>
+
+    <rect x="0" y="0" width="${W}" height="${H}" fill="url(#bg)" />
+
+    <text x="60" y="74" font-size="34" font-weight="900" fill="rgba(255,255,255,0.95)">日本代表 人気スタメン予想</text>
+    <text x="60" y="112" font-size="18" font-weight="700" fill="rgba(255,255,255,0.70)">直近${escapeXml(String(sampleCount))}件のシェアから集計（3-4-2-1）</text>
+
+    <g>
+      <rect x="40" y="140" width="1120" height="450" rx="28" fill="url(#pitch)" stroke="rgba(255,255,255,0.12)" />
+      <line x1="200" y1="160" x2="200" y2="570" stroke="rgba(255,255,255,0.10)" stroke-width="3" />
+      <line x1="420" y1="160" x2="420" y2="570" stroke="rgba(255,255,255,0.10)" stroke-width="3" />
+      <line x1="640" y1="160" x2="640" y2="570" stroke="rgba(255,255,255,0.10)" stroke-width="3" />
+      <line x1="860" y1="160" x2="860" y2="570" stroke="rgba(255,255,255,0.10)" stroke-width="3" />
+    </g>
+
+    ${nodes}
+
+    <text x="1140" y="612" text-anchor="end" font-size="14" font-weight="700" fill="rgba(255,255,255,0.55)">spocale</text>
+  </svg>`;
+
+  return svgDataUrl(svg);
+}
+
+function computePitchAssigned(
+  players: SquadPlayerPrediction[],
+  pitchOverrideBySlot: Partial<Record<FormationSlotKeySimple, string>>
+): Partial<Record<FormationSlotKeySimple, SquadPlayerPrediction>> {
+  const grouped = groupByPosition(players);
+
+  const gk = pickTop(grouped.GK, 1);
+  const cbs = pickTop(grouped.DF, 3);
+  const mids = pickTop(grouped.MF, 4);
+
+  const used = new Set<string>([...gk, ...cbs, ...mids].map((p) => p.id));
+
+  const remainingAttackPool = [...players]
+    .filter((p) => !used.has(p.id))
+    .filter((p) => p.position === 'FW' || p.position === 'MF');
+  const shadows = pickTop(remainingAttackPool, 2);
+  for (const p of shadows) used.add(p.id);
+
+  const remainingTopPool = [...players]
+    .filter((p) => !used.has(p.id))
+    .filter((p) => p.position === 'FW' || p.position === 'MF');
+  const top = pickTop(remainingTopPool, 1);
+
+  const assigned: Partial<Record<FormationSlotKeySimple, SquadPlayerPrediction>> = {
+    GK: gk[0],
+    LCB: cbs[0],
+    CB: cbs[1],
+    RCB: cbs[2],
+    LM: mids[0],
+    LCM: mids[1],
+    RCM: mids[2],
+    RM: mids[3],
+    SS_L: shadows[0],
+    SS_R: shadows[1],
+    ST: top[0],
+  };
+
+  for (const slot of Object.keys(pitchOverrideBySlot) as FormationSlotKeySimple[]) {
+    const pid = pitchOverrideBySlot[slot];
+    if (!pid) continue;
+    const p = players.find((x) => x.id === pid) ?? null;
+    if (p) assigned[slot] = p;
+  }
+
+  return assigned;
+}
 
 export default function Wc2026CountryPage() {
   const params = useParams<{ country: string }>();
@@ -46,6 +206,9 @@ export default function Wc2026CountryPage() {
 
   const [pitchSelectedSlot, setPitchSelectedSlot] = useState<FormationSlotKey | null>(null);
 
+  const [japanPopularBySlot, setJapanPopularBySlot] = useState<Partial<Record<FormationSlotKeySimple, { id: string; name: string; votes: number }>> | null>(null);
+  const [japanPopularSampleCount, setJapanPopularSampleCount] = useState<number>(0);
+
   const { sharing, share, shareLink } = useWc2026Share({
     userUid: user?.uid ?? null,
     countrySlug,
@@ -59,6 +222,102 @@ export default function Wc2026CountryPage() {
   const [shareImageBusy, setShareImageBusy] = useState(false);
 
   const enableImageSaveButton = false;
+
+  const japanPopularImageUrl = useMemo(() => {
+    if (countrySlug !== 'japan') return null;
+    if (!japanPopularBySlot) return null;
+    return buildJapanPopularSvg({ popularBySlot: japanPopularBySlot, sampleCount: japanPopularSampleCount });
+  }, [countrySlug, japanPopularBySlot, japanPopularSampleCount]);
+
+  useEffect(() => {
+    if (countrySlug !== 'japan') return;
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const q = query(collection(db, 'wc2026PredictionShares'), orderBy('createdAt', 'desc'), limit(200));
+        const snap = await getDocs(q);
+        const docs = snap.docs
+          .map((d) => ({ id: d.id, data: d.data() as any }))
+          .filter((row) => row.data?.countrySlug === 'japan')
+          .slice(0, 100);
+
+        const candidates = WC2026_CANDIDATES_BY_COUNTRY['jpn'] ?? [];
+        const nameById = new Map<string, string>(candidates.map((c) => [c.id, c.name] as const));
+
+        const counts: Record<FormationSlotKeySimple, Map<string, number>> = {
+          GK: new Map(),
+          LCB: new Map(),
+          CB: new Map(),
+          RCB: new Map(),
+          LM: new Map(),
+          LCM: new Map(),
+          RCM: new Map(),
+          RM: new Map(),
+          SS_L: new Map(),
+          SS_R: new Map(),
+          ST: new Map(),
+        };
+
+        for (const row of docs) {
+          const raw = typeof row.data?.snapshotJson === 'string' ? row.data.snapshotJson : '';
+          const parsed = raw ? (JSON.parse(raw) as any) : null;
+          const players = (Array.isArray(parsed?.players) ? parsed.players : []) as any[];
+          const pitchOverrideBySlot = (parsed?.pitchOverrideBySlot && typeof parsed.pitchOverrideBySlot === 'object'
+            ? parsed.pitchOverrideBySlot
+            : {}) as Partial<Record<FormationSlotKeySimple, string>>;
+
+          const lite: SquadPlayerPrediction[] = players
+            .filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string')
+            .map((p) => ({
+              id: String(p.id),
+              name: String(p.name),
+              position: p.position as SquadPosition,
+              status: p.status as SquadStatus,
+            }))
+            .filter((p) => p.id && p.name);
+
+          const assigned = computePitchAssigned(lite, pitchOverrideBySlot);
+          for (const slot of SLOT_ORDER_SIMPLE) {
+            const p = assigned[slot];
+            if (!p?.id) continue;
+            const m = counts[slot];
+            m.set(p.id, (m.get(p.id) ?? 0) + 1);
+          }
+        }
+
+        const popular: Partial<Record<FormationSlotKeySimple, { id: string; name: string; votes: number }>> = {};
+        for (const slot of SLOT_ORDER_SIMPLE) {
+          let best: { id: string; votes: number } | null = null;
+          for (const [pid, v] of counts[slot].entries()) {
+            if (!best || v > best.votes) best = { id: pid, votes: v };
+          }
+          if (best) {
+            popular[slot] = {
+              id: best.id,
+              votes: best.votes,
+              name: nameById.get(best.id) ?? best.id,
+            };
+          }
+        }
+
+        if (!cancelled) {
+          setJapanPopularBySlot(Object.keys(popular).length > 0 ? popular : null);
+          setJapanPopularSampleCount(docs.length);
+        }
+      } catch {
+        if (!cancelled) {
+          setJapanPopularBySlot(null);
+          setJapanPopularSampleCount(0);
+        }
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [countrySlug]);
 
   const [squadViewMode, setSquadViewMode] = useState<'list' | 'pitch'>('list');
 
@@ -240,6 +499,22 @@ export default function Wc2026CountryPage() {
         </div>
 
         <div className="h-4" />
+
+        {japanPopularImageUrl ? (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/10 overflow-hidden">
+            <div className="p-4">
+              <div className="text-sm text-gray-100">日本代表 人気スタメン予想</div>
+              <div className="mt-3">
+                <img
+                  src={japanPopularImageUrl}
+                  alt="日本代表 人気スタメン予想"
+                  className="w-full rounded-xl border border-white/10"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {!loading && !user ? (
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/80">

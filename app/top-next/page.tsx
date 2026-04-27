@@ -255,6 +255,13 @@ export default function TopNextPage() {
                         className="object-cover"
                         sizes="(max-width: 768px) 100vw, 960px"
                       />
+                      {ev.id === 'event-3' ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                          <div className="rounded-full bg-black/55 px-4 py-2 text-sm font-black text-white">
+                            準備中
+                          </div>
+                        </div>
+                      ) : null}
                       <div className="absolute bottom-1 left-3 rounded-full bg-black/40 px-2 py-1 text-[10px] font-semibold text-white/90 backdrop-blur">
                         {participantCountText}
                       </div>
