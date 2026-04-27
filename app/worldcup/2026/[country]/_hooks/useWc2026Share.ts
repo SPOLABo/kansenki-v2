@@ -36,7 +36,12 @@ export function useWc2026Share({
     setShareLink(null);
 
     const canNativeShare = typeof navigator !== 'undefined' && 'share' in navigator;
-    const popup = canNativeShare ? null : window.open('about:blank', '_blank');
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    const isIOS = /iP(hone|od|ad)/.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    const isMobile = isIOS || isAndroid;
+
+    const popup = !isMobile && canNativeShare ? null : !isMobile ? window.open('about:blank', '_blank') : null;
 
     setSharing(true);
     setStatusMessage(null);
@@ -114,8 +119,6 @@ export function useWc2026Share({
       const hashtags = encodeURIComponent(rawHashtags);
       const shareUrl = `https://x.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}&hashtags=${hashtags}`;
 
-      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-      const isIOS = /iP(hone|od|ad)/.test(ua);
       const hashtagText = rawHashtags
         .split(',')
         .map((t) => t.trim())
@@ -123,6 +126,24 @@ export function useWc2026Share({
         .map((t) => `#${t}`)
         .join(' ');
       const appUrl = `twitter://post?message=${encodeURIComponent(`${title}\n${url}\n\n${hashtagText}`)}`;
+
+      const androidIntentUrl = `intent://post?message=${encodeURIComponent(
+        `${title}\n${url}\n\n${hashtagText}`
+      )}#Intent;scheme=twitter;package=com.twitter.android;end`;
+
+      if (isAndroid) {
+        const startedAt = Date.now();
+        window.location.href = androidIntentUrl;
+        window.setTimeout(() => {
+          const stillHere = document.visibilityState === 'visible' && Date.now() - startedAt >= 700;
+          if (!stillHere) return;
+          window.location.href = shareUrl;
+        }, 800);
+
+        setShareLink(url);
+        setStatusMessage('Xアプリが開かない場合は、共有リンクをコピーして貼り付けてください');
+        return;
+      }
 
       if (isIOS) {
         const startedAt = Date.now();
