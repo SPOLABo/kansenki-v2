@@ -58,6 +58,8 @@ export default function Wc2026CountryPage() {
 
   const [shareImageBusy, setShareImageBusy] = useState(false);
 
+  const enableImageSaveButton = false;
+
   const [squadViewMode, setSquadViewMode] = useState<'list' | 'pitch'>('list');
 
   const [openSquadSectionByKey, setOpenSquadSectionByKey] = useState<Record<string, boolean>>({
@@ -266,7 +268,7 @@ export default function Wc2026CountryPage() {
                 : 'bg-white/10 text-white/85 border-white/15 hover:bg-white/15 hover:text-white'
             }`}
           >
-            ピッチ（3-4-2-1）
+            スタメン予想
           </button>
         </div>
 
@@ -326,114 +328,109 @@ export default function Wc2026CountryPage() {
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-center">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <button
                       type="button"
-                      disabled={saving}
-                      onClick={save}
+                      disabled={saving || sharing}
+                      onClick={async () => {
+                        const ok = await save();
+                        if (!ok) return;
+                        await share();
+                      }}
                       className="rounded-2xl px-6 py-3 text-sm font-bold bg-sky-600 text-white border border-white/10 hover:bg-sky-500 transition-colors disabled:opacity-50"
                     >
-                      {saving ? '保存中...' : '保存'}
+                      {saving ? '保存中...' : sharing ? '作成中...' : '保存してXでシェア'}
                     </button>
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      disabled={sharing}
-                      onClick={share}
-                      className="rounded-xl px-3 py-2 text-xs bg-black/70 text-white border border-white/10 hover:bg-black/80 transition-colors disabled:opacity-50"
-                    >
-                      {sharing ? '作成中...' : '予想をシェア（Xで共有）'}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={shareImageBusy}
-                      onClick={async () => {
-                        try {
-                          const el = document.getElementById(
-                            squadViewMode === 'pitch' ? 'wc2026-pitch-ogp-capture' : 'wc2026-squad-table-capture'
-                          );
-                          if (!el) return;
-                          setShareImageBusy(true);
-
-                          const rect = el.getBoundingClientRect();
-                          const width = Math.max(1, Math.ceil(rect.width));
-                          const height = Math.max(
-                            1,
-                            Math.ceil((el as HTMLElement).scrollHeight || rect.height || 1)
-                          );
-                          const dataUrl = await toPng(el, {
-                            cacheBust: true,
-                            pixelRatio: 2,
-                            width: squadViewMode === 'pitch' ? 1200 : width,
-                            height: squadViewMode === 'pitch' ? 630 : height,
-                            backgroundColor: '#020617',
-                            style: {
-                              opacity: '1',
-                              transform: 'none',
-                            },
-                            onClone: (doc: Document) => {
-                              try {
-                                const cloned = doc.getElementById(
-                                  squadViewMode === 'pitch' ? 'wc2026-pitch-ogp-capture' : 'wc2026-squad-table-capture'
-                                ) as HTMLElement | null;
-                                if (!cloned) return;
-                                cloned.style.opacity = '1';
-                                cloned.style.transform = 'none';
-                                cloned.style.left = '0px';
-                                cloned.style.top = '0px';
-                                cloned.style.zIndex = '0';
-                                cloned.style.overflow = 'visible';
-                              } catch {
-                                // ignore
-                              }
-                            },
-                          } as any);
-
-                          const filename = `wc2026-${countrySlug || 'squad'}-${squadViewMode === 'pitch' ? 'pitch' : 'table'}.png`;
-                          const blob = await (await fetch(dataUrl)).blob();
-                          const file = new File([blob], filename, { type: 'image/png' });
-
-                          const canShareFiles =
-                            typeof navigator !== 'undefined' &&
-                            'share' in navigator &&
-                            'canShare' in navigator &&
-                            (navigator as any).canShare({ files: [file] });
-
-                          if (canShareFiles) {
-                            await (navigator as any).share({ files: [file], title: filename });
-                            return;
-                          }
-
-                          const objectUrl = URL.createObjectURL(blob);
+                    {enableImageSaveButton ? (
+                      <button
+                        type="button"
+                        disabled={shareImageBusy}
+                        onClick={async () => {
                           try {
-                            const a = document.createElement('a');
-                            a.href = objectUrl;
-                            a.download = filename;
-                            a.rel = 'noopener';
-                            a.click();
+                            const el = document.getElementById(
+                              squadViewMode === 'pitch' ? 'wc2026-pitch-ogp-capture' : 'wc2026-squad-table-capture'
+                            );
+                            if (!el) return;
+                            setShareImageBusy(true);
 
-                            window.setTimeout(() => {
-                              try {
-                                window.open(objectUrl, '_blank', 'noopener,noreferrer');
-                              } catch {
-                                // ignore
-                              }
-                            }, 150);
+                            const rect = el.getBoundingClientRect();
+                            const width = Math.max(1, Math.ceil(rect.width));
+                            const height = Math.max(
+                              1,
+                              Math.ceil((el as HTMLElement).scrollHeight || rect.height || 1)
+                            );
+                            const dataUrl = await toPng(el, {
+                              cacheBust: true,
+                              pixelRatio: 2,
+                              width: squadViewMode === 'pitch' ? 1200 : width,
+                              height: squadViewMode === 'pitch' ? 630 : height,
+                              backgroundColor: '#020617',
+                              style: {
+                                opacity: '1',
+                                transform: 'none',
+                              },
+                              onClone: (doc: Document) => {
+                                try {
+                                  const cloned = doc.getElementById(
+                                    squadViewMode === 'pitch' ? 'wc2026-pitch-ogp-capture' : 'wc2026-squad-table-capture'
+                                  ) as HTMLElement | null;
+                                  if (!cloned) return;
+                                  cloned.style.opacity = '1';
+                                  cloned.style.transform = 'none';
+                                  cloned.style.left = '0px';
+                                  cloned.style.top = '0px';
+                                  cloned.style.zIndex = '0';
+                                  cloned.style.overflow = 'visible';
+                                } catch {
+                                  // ignore
+                                }
+                              },
+                            } as any);
+
+                            const filename = `wc2026-${countrySlug || 'squad'}-${squadViewMode === 'pitch' ? 'pitch' : 'table'}.png`;
+                            const blob = await (await fetch(dataUrl)).blob();
+                            const file = new File([blob], filename, { type: 'image/png' });
+
+                            const canShareFiles =
+                              typeof navigator !== 'undefined' &&
+                              'share' in navigator &&
+                              'canShare' in navigator &&
+                              (navigator as any).canShare({ files: [file] });
+
+                            if (canShareFiles) {
+                              await (navigator as any).share({ files: [file], title: filename });
+                              return;
+                            }
+
+                            const objectUrl = URL.createObjectURL(blob);
+                            try {
+                              const a = document.createElement('a');
+                              a.href = objectUrl;
+                              a.download = filename;
+                              a.rel = 'noopener';
+                              a.click();
+
+                              window.setTimeout(() => {
+                                try {
+                                  window.open(objectUrl, '_blank', 'noopener,noreferrer');
+                                } catch {
+                                  // ignore
+                                }
+                              }, 150);
+                            } finally {
+                              window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+                            }
+                          } catch {
+                            // ignore
                           } finally {
-                            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+                            setShareImageBusy(false);
                           }
-                        } catch {
-                          // ignore
-                        } finally {
-                          setShareImageBusy(false);
-                        }
-                      }}
-                      className="rounded-xl px-3 py-2 text-xs bg-white/10 text-gray-100 border border-white/10 hover:bg-white/15 transition-colors disabled:opacity-50"
-                    >
-                      {shareImageBusy ? '作成中...' : '画像を保存'}
-                    </button>
+                        }}
+                        className="rounded-xl px-3 py-2 text-xs bg-white/10 text-gray-100 border border-white/10 hover:bg-white/15 transition-colors disabled:opacity-50"
+                      >
+                        {shareImageBusy ? '作成中...' : '画像を保存'}
+                      </button>
+                    ) : null}
                   </div>
                 </>
               )}

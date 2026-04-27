@@ -20,11 +20,15 @@ const tabs: TabItem[] = [
 
 export default function BottomTabBar() {
   const pathname = usePathname();
+  const visibleTabs = tabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-slate-950/80 backdrop-blur">
-      <div className="mx-auto grid max-w-xl grid-cols-3 px-2 py-2">
-        {tabs.map((t) => {
+      <div
+        className="mx-auto grid max-w-xl px-2 py-2"
+        style={{ gridTemplateColumns: `repeat(${Math.max(1, visibleTabs.length)}, minmax(0, 1fr))` }}
+      >
+        {visibleTabs.map((t) => {
           const active =
             !t.external && (pathname === t.href || (t.href !== '/' && pathname?.startsWith(`${t.href}/`)));
           const Icon = t.icon;

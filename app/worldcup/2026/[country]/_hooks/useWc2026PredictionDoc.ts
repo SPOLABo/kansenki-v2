@@ -87,7 +87,7 @@ export function useWc2026PredictionDoc({ userUid, countrySlug }: UseWc2026Predic
   }, [docRef, userUid]);
 
   const save = async () => {
-    if (!docRef) return;
+    if (!docRef) return false;
     setSaving(true);
     setStatusMessage(null);
     try {
@@ -130,10 +130,12 @@ export function useWc2026PredictionDoc({ userUid, countrySlug }: UseWc2026Predic
       window.setTimeout(() => {
         setStatusMessage((prev) => (prev === '保存しました' ? null : prev));
       }, 2000);
+      return true;
     } catch (e: any) {
       const code = typeof e?.code === 'string' ? e.code : '';
       const msg = typeof e?.message === 'string' ? e.message : '';
       setStatusMessage(`保存に失敗しました${code || msg ? `：${code || msg}` : ''}`);
+      return false;
     } finally {
       setSaving(false);
     }

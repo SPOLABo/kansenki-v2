@@ -332,6 +332,15 @@ export default function TopNextPage() {
             );
           })}
         </div>
+
+        <div className="mt-10 border-t border-gray-200 pt-6 text-center dark:border-gray-800">
+          <Link
+            href="/privacy"
+            className="text-sm font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+          >
+            プライバシーポリシー
+          </Link>
+        </div>
       </div>
     </main>
   );
