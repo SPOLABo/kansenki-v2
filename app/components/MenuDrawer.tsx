@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 
 // 型定義を明確化
@@ -106,6 +106,7 @@ export default function MenuDrawer() {
   useTheme();
   const [openSection, setOpenSection] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const isWc2026 = pathname === '/worldcup/2026';
   const isWc2026Path = pathname.startsWith('/worldcup/2026');
   const isTopNext = pathname === '/top-next';
@@ -113,6 +114,7 @@ export default function MenuDrawer() {
   const isPrivacyPath = pathname.startsWith('/privacy');
   const isTimelinePath = pathname.startsWith('/timeline');
   const isEventsPath = pathname.startsWith('/events');
+  const isPlFinalTablePath = pathname.startsWith('/events/premier-league-final-table');
 
   const activeMenuConfig = isTopNextPath ? topNextMenuConfig : isWc2026Path ? wc2026MenuConfig : menuConfig;
   const isSpocaleHeader = isWc2026 || isTopNext || isEventsPath || isPrivacyPath || isTimelinePath;
@@ -123,7 +125,7 @@ export default function MenuDrawer() {
     setOpenSection(openSection === section ? null : section);
   };
 
-  const shouldHideHamburgerMenu = isPrivacyPath || isTopNextPath || isTimelinePath;
+  const shouldHideHamburgerMenu = isPrivacyPath || isTopNextPath || isTimelinePath || isWc2026 || isPlFinalTablePath;
 
   return (
     <>
@@ -175,6 +177,18 @@ export default function MenuDrawer() {
             )}
           </div>
         </div>
+
+        {isWc2026 || isPlFinalTablePath ? (
+          <div className="absolute left-4 top-1/2 -translate-y-1/2">
+            <button
+              type="button"
+              onClick={() => router.push('/top-next')}
+              className="text-sm font-bold text-white/90 hover:text-white"
+            >
+              ← 戻る
+            </button>
+          </div>
+        ) : null}
 
         {!shouldHideHamburgerMenu ? (
           <div className="absolute right-4 top-1/2 -translate-y-1/2">

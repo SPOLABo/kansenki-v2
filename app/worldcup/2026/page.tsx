@@ -54,13 +54,12 @@ async function getCountryAggregates(countrySlug: string): Promise<PlayerAgg[]> {
 }
 
 export default async function Wc2026IndexPage() {
-  const visibleCountries = WC2026_COUNTRIES.filter((c) => c.slug === 'japan' || c.slug === 'england');
+  const visibleCountries = WC2026_COUNTRIES.filter((c) => c.slug === 'japan');
 
   const ogpImageSrc = `/${encodeURIComponent('選考予想OGP.png')}`;
 
   const flagSrcBySlug: Record<string, string> = {
     japan: 'https://flagcdn.com/w320/jp.png',
-    england: 'https://flagcdn.com/w320/gb-eng.png',
   };
 
   const japanAgg = await getCountryAggregates('japan');
@@ -120,20 +119,26 @@ export default async function Wc2026IndexPage() {
           <div className="mt-1 text-xs text-white/60">ログインして国別に自分の予想を作成できます</div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {visibleCountries.map((c) => (
-            <Link
-              key={c.slug}
-              href={`/worldcup/2026/${c.slug}`}
-              className="block"
-            >
-              <img
-                src={flagSrcBySlug[c.slug]}
-                alt={`${c.nameJa} 国旗`}
-                className="w-full aspect-[3/2] rounded-2xl border border-white/10 object-cover hover:opacity-90 transition-opacity"
-                loading="lazy"
-              />
-            </Link>
+            <div key={c.slug} className="text-center">
+              <Link href={`/worldcup/2026/${c.slug}`} className="block">
+                <img
+                  src={flagSrcBySlug[c.slug]}
+                  alt={`${c.nameJa} 国旗`}
+                  className="block w-full max-w-[200px] mx-auto aspect-[3/2] rounded-2xl border border-white/10 object-cover hover:opacity-90 transition-opacity"
+                  loading="lazy"
+                />
+              </Link>
+              <div className="mt-3">
+                <Link
+                  href={`/worldcup/2026/${c.slug}`}
+                  className="inline-flex items-center justify-center rounded-full bg-orange-600 px-6 py-3 text-sm font-black text-white hover:bg-orange-500 transition-colors"
+                >
+                  メンバーを選出
+                </Link>
+              </div>
+            </div>
           ))}
         </div>
 
