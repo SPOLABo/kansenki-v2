@@ -2,13 +2,23 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, doc, getDoc, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, limit, orderBy, Timestamp } from 'firebase/firestore';
 export const dynamic = 'force-dynamic';
 
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FaInstagram, FaYoutube, FaXTwitter } from 'react-icons/fa6';
+import { toPng } from 'html-to-image';
+import type { SquadPlayerPrediction } from '@/types/worldcup';
+import {
+  type FormationSlotKey,
+  groupByPosition,
+  pickTop,
+  statusMark,
+  statusMarkClassName,
+} from '@/app/worldcup/2026/[country]/wc2026PredictionUtils';
+import { Wc2026PitchOgpCapture } from '@/app/worldcup/2026/[country]/_components/Wc2026PitchOgpCapture';
 
 import { useTheme } from 'next-themes';
 import PostCard from '@/components/PostCard';
@@ -112,6 +122,13 @@ export default function UserPostsPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  const [wc2026Saved, setWc2026Saved] = useState<
+    { countrySlug: string; updatedAt: Date | null; comment?: string; players: SquadPlayerPrediction[]; pitchOverrideBySlot: Record<string, string> }[]
+  >([]);
+  const [wc2026Loading, setWc2026Loading] = useState(false);
+  const [wc2026ThumbBySlug, setWc2026ThumbBySlug] = useState<Record<string, string>>({});
+  const [openImageUrl, setOpenImageUrl] = useState<string | null>(null);
+
   const getMillis = (date: Date | Timestamp | null): number => {
     if (!date) return 0;
     if (date instanceof Timestamp) return date.toMillis();
@@ -195,6 +212,159 @@ export default function UserPostsPage() {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const userId = typeof id === 'string' ? id : '';
+    if (!userId) return;
+
+    const run = async () => {
+      setWc2026Loading(true);
+      try {
+        const q = query(
+          collection(db, 'wc2026PredictionShares'),
+          where('tournamentId', '==', 'wc2026'),
+          where('createdByUid', '==', userId),
+          orderBy('updatedAt', 'desc'),
+          limit(20)
+        );
+        const snap = await getDocs(q);
+        const next = snap.docs
+          .map((d) => {
+            const data: any = d.data();
+            const updatedAt = data?.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : null;
+            const snapshotJson = typeof data?.snapshotJson === 'string' ? data.snapshotJson : '';
+            let parsed: any = null;
+            try {
+              parsed = snapshotJson ? JSON.parse(snapshotJson) : null;
+            } catch {
+              parsed = null;
+            }
+
+            const countrySlug = typeof data?.countrySlug === 'string' ? data.countrySlug : typeof parsed?.countrySlug === 'string' ? parsed.countrySlug : '';
+            const comment = typeof parsed?.comment === 'string' ? parsed.comment : undefined;
+            const players = (Array.isArray(parsed?.players) ? parsed.players : []) as any[];
+            const litePlayers: SquadPlayerPrediction[] = players
+              .filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string')
+              .map((p) => ({
+                id: String(p.id),
+                name: String(p.name),
+                position: p.position as any,
+                status: p.status as any,
+              }));
+            const pitchOverrideBySlot =
+              parsed?.pitchOverrideBySlot && typeof parsed.pitchOverrideBySlot === 'object'
+                ? (parsed.pitchOverrideBySlot as Record<string, string>)
+                : {};
+            return { countrySlug, updatedAt, comment, players: litePlayers, pitchOverrideBySlot };
+          })
+          .filter((x) => Boolean(x.countrySlug));
+
+        if (!cancelled) setWc2026Saved(next);
+      } catch {
+        if (!cancelled) setWc2026Saved([]);
+      } finally {
+        if (!cancelled) setWc2026Loading(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const pitchDataBySlug = (() => {
+    const out: Record<string, { assigned: Partial<Record<FormationSlotKey, SquadPlayerPrediction>> }> = {};
+    for (const item of wc2026Saved) {
+      const players = item.players;
+      const pitchOverrideBySlot = item.pitchOverrideBySlot;
+      const grouped = groupByPosition(players);
+
+      const gk = pickTop(grouped.GK, 1);
+      const cbs = pickTop(grouped.DF, 3);
+      const mids = pickTop(grouped.MF, 4);
+
+      const used = new Set<string>([...gk, ...cbs, ...mids].map((p) => p.id));
+
+      const remainingAttackPool = [...players]
+        .filter((p) => !used.has(p.id))
+        .filter((p) => p.position === 'FW' || p.position === 'MF');
+
+      const shadows = pickTop(remainingAttackPool, 2);
+      for (const p of shadows) used.add(p.id);
+
+      const remainingTopPool = [...players]
+        .filter((p) => !used.has(p.id))
+        .filter((p) => p.position === 'FW' || p.position === 'MF');
+      const top = pickTop(remainingTopPool, 1);
+
+      const assigned: Partial<Record<FormationSlotKey, SquadPlayerPrediction>> = {
+        GK: gk[0],
+        LCB: cbs[0],
+        CB: cbs[1],
+        RCB: cbs[2],
+        LM: mids[0],
+        LCM: mids[1],
+        RCM: mids[2],
+        RM: mids[3],
+        SS_L: shadows[0],
+        SS_R: shadows[1],
+        ST: top[0],
+      };
+
+      for (const slot of Object.keys(pitchOverrideBySlot) as FormationSlotKey[]) {
+        const pid = pitchOverrideBySlot[slot];
+        if (!pid) continue;
+        const p = players.find((x) => x.id === pid) ?? null;
+        if (p) assigned[slot] = p;
+      }
+
+      out[item.countrySlug] = { assigned };
+    }
+    return out;
+  })();
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      const targets = wc2026Saved
+        .filter((x) => x.countrySlug === 'japan')
+        .slice(0, 1)
+        .filter((x) => !wc2026ThumbBySlug[x.countrySlug]);
+
+      for (const t of targets) {
+        const el = document.getElementById(`wc2026-user-ogp-${t.countrySlug}`);
+        if (!el) continue;
+        try {
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
+          const dataUrl = await toPng(el as HTMLElement, {
+            pixelRatio: 1,
+            cacheBust: true,
+            width: 1200,
+            height: 630,
+            style: {
+              transform: 'none',
+              position: 'relative',
+              left: '0',
+              top: '0',
+              pointerEvents: 'none',
+            },
+          });
+          if (!cancelled) {
+            setWc2026ThumbBySlug((prev) => ({ ...prev, [t.countrySlug]: dataUrl }));
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [wc2026Saved, wc2026ThumbBySlug]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen"><p>Loading...</p></div>;
@@ -286,6 +456,87 @@ export default function UserPostsPage() {
                   </div>
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {openImageUrl ? (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/80"
+          onClick={() => setOpenImageUrl(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="absolute top-4 right-4">
+            <button
+              type="button"
+              className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white border border-white/10 hover:bg-white/15 transition-colors"
+              onClick={() => setOpenImageUrl(null)}
+            >
+              閉じる
+            </button>
+          </div>
+          <div className="h-full w-full overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="min-h-full min-w-full flex items-center justify-center p-6">
+              <img
+                src={openImageUrl}
+                alt="スタメン予想"
+                className="rounded-xl border border-white/10"
+                style={{ width: 1200, height: 630, maxWidth: 'none' }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="px-4 mt-4 border-t dark:border-gray-700 pt-6">
+        <div className="text-base font-bold">保存した予想</div>
+        {wc2026Loading ? (
+          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">読み込み中...</div>
+        ) : wc2026Saved.length === 0 ? (
+          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">まだ保存した予想がありません</div>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {wc2026Saved
+              .filter((p) => p.countrySlug === 'japan')
+              .slice(0, 1)
+              .map((p) => (
+                <Link
+                  key={p.countrySlug}
+                  href={`/worldcup/2026/${p.countrySlug}`}
+                  className="block w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm hover:bg-gray-50 transition-colors dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900"
+                >
+                  <div className="mb-2">
+                    {wc2026ThumbBySlug[p.countrySlug] ? (
+                      <img
+                        src={wc2026ThumbBySlug[p.countrySlug]}
+                        alt="スタメン予想"
+                        className="w-full rounded-lg border border-gray-200 dark:border-gray-800"
+                        loading="lazy"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setOpenImageUrl(wc2026ThumbBySlug[p.countrySlug]);
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full aspect-[1200/630] rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900" />
+                    )}
+                    {pitchDataBySlug[p.countrySlug] ? (
+                      <Wc2026PitchOgpCapture
+                        id={`wc2026-user-ogp-${p.countrySlug}`}
+                        countryNameJa="日本"
+                        pitchData={pitchDataBySlug[p.countrySlug]}
+                        statusMark={statusMark}
+                        statusMarkClassName={statusMarkClassName}
+                      />
+                    ) : null}
+                  </div>
+                  <div className="text-sm font-bold">W杯2026：日本代表</div>
+                  {p.comment ? <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{p.comment}</div> : null}
+                  <div className="mt-1 text-[11px] text-gray-500">{p.updatedAt ? `更新：${p.updatedAt.toLocaleString('ja-JP')}` : ''}</div>
+                </Link>
+              ))}
           </div>
         )}
       </div>
