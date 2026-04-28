@@ -4,16 +4,17 @@ import type { SquadPlayerPrediction, SquadStatus } from '@/types/worldcup';
 import { FORMATION_3421_SLOTS } from '../wc2026PredictionUtils';
 
 export function Wc2026PitchOgpCapture(props: {
+  id?: string;
   countryNameJa: string;
   pitchData: { assigned: Partial<Record<string, SquadPlayerPrediction>> };
   statusMark: (status: SquadStatus) => string;
   statusMarkClassName: (status: SquadStatus) => string;
 }) {
-  const { countryNameJa, pitchData, statusMark, statusMarkClassName } = props;
+  const { id, countryNameJa, pitchData, statusMark, statusMarkClassName } = props;
 
   return (
     <div
-      id="wc2026-pitch-ogp-capture"
+      id={id ?? 'wc2026-pitch-ogp-capture'}
       style={{
         position: 'fixed',
         left: 0,
@@ -71,8 +72,8 @@ export function Wc2026PitchOgpCapture(props: {
                   style={{ left: `${slot.leftPct}%`, top: `${slot.topPct}%` }}
                 >
                   <div
-                    className="rounded-full text-white/90 whitespace-nowrap truncate border bg-black/55 border-white/10 px-5 py-2.5 text-[18px]"
-                    style={{ maxWidth: 560 }}
+                    className="rounded-full text-white/90 whitespace-nowrap truncate border bg-black/55 border-white/10 px-6 py-3 text-[22px]"
+                    style={{ maxWidth: 680 }}
                   >
                     {p ? (
                       <>

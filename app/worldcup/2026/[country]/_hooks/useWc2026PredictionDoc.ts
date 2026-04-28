@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type {
   LegacySquadStatus,
@@ -11,7 +11,7 @@ import type {
   SquadStatus,
 } from '@/types/worldcup';
 import type { FormationSlotKey } from '../wc2026PredictionUtils';
-import { sanitizePlayersForFirestore, toNewStatus } from '../wc2026PredictionUtils';
+import { randomId, sanitizePlayersForFirestore, toNewStatus } from '../wc2026PredictionUtils';
 
 type UseWc2026PredictionDocArgs = {
   userUid: string | null;
@@ -124,6 +124,42 @@ export function useWc2026PredictionDoc({ userUid, countrySlug }: UseWc2026Predic
           },
           { merge: true }
         );
+      }
+
+      try {
+        if (userUid && countrySlug) {
+          const shareId = `${countrySlug}_${userUid}`;
+          const shareRef = doc(db, 'wc2026PredictionShares', shareId);
+
+          const snapshotJson = JSON.stringify({
+            countrySlug,
+            players: sanitizedPlayers,
+            pitchOverrideBySlot,
+            formation: formation || '3-4-2-1',
+            comment: trimmedComment || undefined,
+          });
+
+          const existing = await getDoc(shareRef);
+          const createdAt = existing.exists() ? (existing.data() as any)?.createdAt : null;
+
+          await setDoc(
+            shareRef,
+            {
+              schemaVersion: 1,
+              tournamentId: 'wc2026',
+              countrySlug,
+              snapshotJson,
+              ogImageUrl: null,
+              commentCount: 0,
+              createdByUid: userUid,
+              createdAt: createdAt ?? serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
+      } catch {
+        // ignore
       }
 
       setStatusMessage('保存しました');

@@ -341,6 +341,18 @@ export default function Wc2026CountryPage() {
                     >
                       {saving ? '保存中...' : sharing ? '作成中...' : '保存してXでシェア'}
                     </button>
+                    {countrySlug === 'japan' ? (
+                      <button
+                        type="button"
+                        disabled={saving || sharing}
+                        onClick={async () => {
+                          await save();
+                        }}
+                        className="rounded-2xl px-6 py-3 text-sm font-bold bg-white/10 text-white/90 border border-white/10 hover:bg-white/15 hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        {saving ? '保存中...' : '予想を保存'}
+                      </button>
+                    ) : null}
                     {enableImageSaveButton ? (
                       <button
                         type="button"
