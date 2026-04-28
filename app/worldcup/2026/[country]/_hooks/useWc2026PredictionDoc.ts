@@ -139,9 +139,6 @@ export function useWc2026PredictionDoc({ userUid, countrySlug }: UseWc2026Predic
             comment: trimmedComment || undefined,
           });
 
-          const existing = await getDoc(shareRef);
-          const createdAt = existing.exists() ? (existing.data() as any)?.createdAt : null;
-
           await setDoc(
             shareRef,
             {
@@ -152,14 +149,14 @@ export function useWc2026PredictionDoc({ userUid, countrySlug }: UseWc2026Predic
               ogImageUrl: null,
               commentCount: 0,
               createdByUid: userUid,
-              createdAt: createdAt ?? serverTimestamp(),
+              createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             },
             { merge: true }
           );
         }
-      } catch {
-        // ignore
+      } catch (e) {
+        console.error('[useWc2026PredictionDoc] failed to upsert wc2026PredictionShares', e);
       }
 
       setStatusMessage('保存しました');
