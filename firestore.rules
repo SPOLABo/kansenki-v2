@@ -61,6 +61,10 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
+      match /wc2026Likes/{shareId} {
+        allow read, write: if isOwner(userId);
+      }
+
       match /bookmarks/{postId} {
         allow read, write: if isOwner(userId);
       }
@@ -96,7 +100,7 @@ service cloud.firestore {
       allow create: if isSignedIn()
                     && request.resource.data.createdByUid == request.auth.uid;
       allow update: if isSignedIn()
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount']);
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'likeCount']);
       allow delete: if (isSignedIn() && resource.data.createdByUid == request.auth.uid) || isAdmin();
 
       match /comments/{commentId} {

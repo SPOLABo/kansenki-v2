@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "spocale-footballtop"
-  }
+    "default": "spocale-footballtop",
+    "footballtop": "footballtop-a4271"
+  },
+  "targets": {},
+  "etags": {}
 }

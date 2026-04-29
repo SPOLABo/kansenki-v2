@@ -3,7 +3,21 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, Timestamp } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  increment,
+  limit,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  Timestamp,
+} from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import PostCard from '@/components/PostCard';
 import PostActions3 from '@/app/timeline/components/PostActions3';
@@ -12,12 +26,18 @@ import { getWc2026CountryBySlug } from '@/lib/worldcup/wc2026Countries';
 import { premierLeagueClubs } from '@/lib/clubMaster';
 import type { FormationSlotKey } from '@/app/worldcup/2026/[country]/wc2026PredictionUtils';
 import type { SquadPlayerPrediction, SquadStatus } from '@/types/worldcup';
+import { toPng } from 'html-to-image';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { FaRegComment, FaHeart, FaRegHeart } from 'react-icons/fa';
 import {
   FORMATION_3421_SLOTS,
   groupByPosition,
   pickTop,
   statusMark,
+  statusMarkClassName,
 } from '@/app/worldcup/2026/[country]/wc2026PredictionUtils';
+import { Wc2026PitchOgpCapture } from '@/app/worldcup/2026/[country]/_components/Wc2026PitchOgpCapture';
 
 type FeedItem =
   | {
@@ -35,6 +55,9 @@ type FeedItem =
       href: string;
       imageUrl: string | null;
       fallbackImageUrl: string | null;
+      pitchData: { assigned: Partial<Record<FormationSlotKey, SquadPlayerPrediction>> } | null;
+      commentCount: number;
+      likeCount: number;
       comment: string;
     }
   | {
@@ -232,6 +255,21 @@ export default function MixedFeedSection() {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [authorByUid, setAuthorByUid] = useState<Record<string, TimelineAuthor>>({});
+  const [wc2026ThumbByShareId, setWc2026ThumbByShareId] = useState<Record<string, string>>({});
+  const [user, setUser] = useState<User | null>(null);
+  const [likedWcShareIds, setLikedWcShareIds] = useState<Record<string, boolean>>({});
+  const [likingWcShareIds, setLikingWcShareIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (!u) {
+        setLikedWcShareIds({});
+        setLikingWcShareIds({});
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -364,9 +402,14 @@ export default function MixedFeedSection() {
                   if (p) assigned[slot] = p;
                 }
 
-                const imageUrl = countrySlug
+                const storedOg =
+                  typeof data?.ogImageUrl === 'string' && data.ogImageUrl.trim() ? data.ogImageUrl.trim() : null;
+
+                const apiImageUrl = countrySlug
                   ? `/api/wc2026-og/${encodeURIComponent(countrySlug)}/${encodeURIComponent(d.id)}?mode=pitch`
                   : null;
+
+                const imageUrl = storedOg ?? apiImageUrl;
 
                 const fallbackImageUrl = players.length > 0
                   ? buildOgpLikePitchSvg({ countryNameJa: country?.nameJa ?? 'W杯2026', assigned })
@@ -374,6 +417,9 @@ export default function MixedFeedSection() {
 
                 const comment = typeof parsed?.comment === 'string' ? parsed.comment : '';
                 const trimmedComment = comment.trim().slice(0, 120);
+
+                const commentCount = typeof data?.commentCount === 'number' ? data.commentCount : 0;
+                const likeCount = typeof data?.likeCount === 'number' ? data.likeCount : 0;
 
                 return {
                   kind: 'wc2026' as const,
@@ -384,6 +430,9 @@ export default function MixedFeedSection() {
                   href: `/worldcup/2026/${countrySlug}/share/${d.id}`,
                   imageUrl,
                   fallbackImageUrl,
+                  pitchData: players.length > 0 ? ({ assigned } as any) : null,
+                  commentCount,
+                  likeCount,
                   comment: trimmedComment,
                 };
               })
@@ -485,9 +534,164 @@ export default function MixedFeedSection() {
 
   const shown = useMemo(() => items.slice(0, 40), [items]);
 
+  const wc2026CaptureTargets = useMemo(() => {
+    return shown
+      .filter((it) => it.kind === 'wc2026')
+      .slice(0, 6)
+      .map((it) => it as Extract<FeedItem, { kind: 'wc2026' }>);
+  }, [shown]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.uid) return;
+
+    const run = async () => {
+      const targets = wc2026CaptureTargets.map((t) => t.id).filter(Boolean);
+      const missing = targets.filter((id) => likedWcShareIds[id] === undefined);
+      if (missing.length === 0) return;
+
+      const next: Record<string, boolean> = {};
+      for (const shareId of missing) {
+        try {
+          const snap = await getDoc(doc(db, 'users', user.uid, 'wc2026Likes', shareId));
+          next[shareId] = snap.exists();
+        } catch {
+          next[shareId] = false;
+        }
+      }
+
+      if (!cancelled) {
+        setLikedWcShareIds((prev) => ({ ...prev, ...next }));
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [likedWcShareIds, user?.uid, wc2026CaptureTargets]);
+
+  const toggleWc2026Like = async (shareId: string) => {
+    if (!shareId) return;
+    if (!user?.uid) {
+      alert('いいねするにはログインが必要です。');
+      return;
+    }
+    if (likingWcShareIds[shareId]) return;
+
+    const currentlyLiked = Boolean(likedWcShareIds[shareId]);
+    const nextLiked = !currentlyLiked;
+
+    setLikingWcShareIds((prev) => ({ ...prev, [shareId]: true }));
+    setLikedWcShareIds((prev) => ({ ...prev, [shareId]: nextLiked }));
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.kind !== 'wc2026') return it;
+        if (it.id !== shareId) return it;
+        const base = typeof it.likeCount === 'number' ? it.likeCount : 0;
+        const next = base + (nextLiked ? 1 : -1);
+        return { ...it, likeCount: next < 0 ? 0 : next };
+      })
+    );
+
+    try {
+      const likeRef = doc(db, 'users', user.uid, 'wc2026Likes', shareId);
+      const shareRef = doc(db, 'wc2026PredictionShares', shareId);
+      if (nextLiked) {
+        await setDoc(likeRef, { shareId, createdAt: serverTimestamp() });
+        await updateDoc(shareRef, { likeCount: increment(1) });
+      } else {
+        await deleteDoc(likeRef);
+        await updateDoc(shareRef, { likeCount: increment(-1) });
+      }
+    } catch (e: any) {
+      const projectId = (db as any)?.app?.options?.projectId;
+      console.error('[MixedFeedSection] toggleWc2026Like failed', {
+        shareId,
+        nextLiked,
+        uid: user.uid,
+        projectId,
+        likePath: `users/${user.uid}/wc2026Likes/${shareId}`,
+        sharePath: `wc2026PredictionShares/${shareId}`,
+        code: typeof e?.code === 'string' ? e.code : undefined,
+        message: typeof e?.message === 'string' ? e.message : undefined,
+        raw: e,
+      });
+      setLikedWcShareIds((prev) => ({ ...prev, [shareId]: currentlyLiked }));
+      setItems((prev) =>
+        prev.map((it) => {
+          if (it.kind !== 'wc2026') return it;
+          if (it.id !== shareId) return it;
+          const base = typeof it.likeCount === 'number' ? it.likeCount : 0;
+          const next = base + (nextLiked ? -1 : 1);
+          return { ...it, likeCount: next < 0 ? 0 : next };
+        })
+      );
+      const code = typeof e?.code === 'string' ? e.code : '';
+      const msg = typeof e?.message === 'string' ? e.message : '';
+      alert(
+        `エラーが発生しました。もう一度お試しください。${code || msg ? `\n${code || msg}` : ''}${projectId ? `\nprojectId: ${projectId}` : ''}`
+      );
+    } finally {
+      setLikingWcShareIds((prev) => ({ ...prev, [shareId]: false }));
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      for (const t of wc2026CaptureTargets) {
+        if (wc2026ThumbByShareId[t.id]) continue;
+        if (!t.pitchData) continue;
+        const el = document.getElementById(`wc2026-timeline-ogp-${t.id}`);
+        if (!el) continue;
+        try {
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
+          const dataUrl = await toPng(el as HTMLElement, {
+            pixelRatio: 1,
+            cacheBust: true,
+            width: 1200,
+            height: 630,
+            style: {
+              transform: 'none',
+              position: 'relative',
+              left: '0',
+              top: '0',
+              pointerEvents: 'none',
+            },
+          });
+          if (!cancelled) {
+            setWc2026ThumbByShareId((prev) => ({ ...prev, [t.id]: dataUrl }));
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [wc2026CaptureTargets, wc2026ThumbByShareId]);
+
   return (
     <div className="rounded-2xl border border-white/10 bg-white/10 overflow-hidden mb-4">
       <div className="p-4">
+        {wc2026CaptureTargets.map((t) => {
+          if (!t.pitchData) return null;
+          return (
+            <Wc2026PitchOgpCapture
+              key={`wc2026-cap-${t.id}`}
+              id={`wc2026-timeline-ogp-${t.id}`}
+              countryNameJa={t.countryNameJa}
+              pitchData={t.pitchData}
+              statusMark={statusMark}
+              statusMarkClassName={statusMarkClassName}
+            />
+          );
+        })}
         {loading ? (
           <div className="mt-4 text-xs text-gray-300">読み込み中...</div>
         ) : shown.length === 0 ? (
@@ -508,16 +712,21 @@ export default function MixedFeedSection() {
 
               if (it.kind === 'wc2026') {
                 const author = it.createdByUid ? authorByUid[it.createdByUid] : undefined;
+                const thumb = wc2026ThumbByShareId[it.id];
+                const preferredImageUrl = thumb || it.imageUrl;
+                const iconBase = 'w-4 h-4';
+                const liked = Boolean(likedWcShareIds[it.id]);
+                const likeBusy = Boolean(likingWcShareIds[it.id]);
                 return (
                   <Link
                     key={`wc-${it.id}`}
                     href={it.href}
                     className="block w-full rounded-xl border border-gray-200 bg-white text-left shadow-sm hover:bg-gray-50 transition-colors overflow-hidden dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900"
                   >
-                    {it.imageUrl ? (
+                    {preferredImageUrl ? (
                       <div className="px-4 pt-3">
                         <img
-                          src={it.imageUrl}
+                          src={preferredImageUrl}
                           alt="スタメン予想"
                           className="w-full rounded-lg border border-gray-200 dark:border-gray-800"
                           loading="lazy"
@@ -539,6 +748,31 @@ export default function MixedFeedSection() {
                         <div className="text-[11px] text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
                       </div>
                       {it.comment ? <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{it.comment}</div> : null}
+
+                      <div className="mt-2 flex items-center gap-5 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="inline-flex items-center gap-2" aria-label="コメント数">
+                          <FaRegComment className={iconBase} />
+                          <span>{it.commentCount ?? 0}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            void toggleWc2026Like(it.id);
+                          }}
+                          disabled={likeBusy}
+                          className={
+                            'inline-flex items-center gap-2 transition-colors ' +
+                            (liked ? 'text-pink-500 hover:text-pink-400' : 'hover:text-gray-700 dark:hover:text-gray-200') +
+                            (likeBusy ? ' opacity-60 cursor-not-allowed' : '')
+                          }
+                          aria-label="いいね"
+                        >
+                          {liked ? <FaHeart className={iconBase} /> : <FaRegHeart className={iconBase} />}
+                          <span>{it.likeCount ?? 0}</span>
+                        </button>
+                      </div>
 
                       {author && it.createdByUid ? (
                         <div className="mt-3 flex items-center text-xs text-gray-500 dark:text-gray-400">
