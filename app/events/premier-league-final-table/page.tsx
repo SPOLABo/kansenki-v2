@@ -2,8 +2,8 @@
 
 import Image from 'next/image';
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { doc, getDoc, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadString } from 'firebase/storage';
 import { toPng } from 'html-to-image';
 import { premierLeagueClubs } from '@/lib/clubMaster';
@@ -124,6 +124,7 @@ function normalizeFixtureClubId(id: string) {
 
 export default function PremierLeagueFinalTableEventPage() {
   const { user } = useAuth();
+  const router = useRouter();
 
   const clubs = useMemo<ClubRow[]>(() => {
     return Object.values(premierLeagueClubs)
@@ -133,6 +134,9 @@ export default function PremierLeagueFinalTableEventPage() {
 
   const [selectedByRank, setSelectedByRank] = useState<(string | null)[]>(() => Array.from({ length: DISPLAY_RANK_COUNT }, () => null));
   const [activeRankIndex, setActiveRankIndex] = useState<number | null>(null);
+
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     try {
@@ -153,6 +157,59 @@ export default function PremierLeagueFinalTableEventPage() {
       return;
     }
   }, [clubs]);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const ref = doc(db, 'users', user.uid, 'plFinalTablePredictions', 'premier-league-final-table');
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const data: any = snap.data();
+        const raw = typeof data?.snapshotJson === 'string' ? data.snapshotJson : '';
+        const parsed = raw ? JSON.parse(raw) : null;
+        const arr = Array.isArray(parsed?.selectedByRank) ? parsed.selectedByRank : [];
+
+        const known = new Set(clubs.map((c) => c.id));
+        const normalized = arr
+          .slice(0, DISPLAY_RANK_COUNT)
+          .map((x: unknown) => (typeof x === 'string' && known.has(x) ? x : null));
+        const padded = [
+          ...normalized,
+          ...Array.from({ length: Math.max(0, DISPLAY_RANK_COUNT - normalized.length) }, () => null),
+        ];
+
+        const nextSavedAt = (() => {
+          const t = data?.updatedAt;
+          if (!t) return null;
+          if (t instanceof Date) return t;
+          if (typeof t?.toDate === 'function') return t.toDate();
+          if (typeof t?.seconds === 'number') return new Timestamp(t.seconds, t.nanoseconds).toDate();
+          return null;
+        })();
+
+        if (!cancelled) {
+          setSelectedByRank(padded);
+          setSaveState('saved');
+          setSavedAt(nextSavedAt);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(padded));
+          } catch {
+            // ignore
+          }
+        }
+      } catch {
+        return;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clubs, user?.uid]);
 
   useEffect(() => {
     try {
@@ -345,6 +402,44 @@ export default function PremierLeagueFinalTableEventPage() {
     }
   };
 
+  const savePrediction = async () => {
+    if (!user?.uid) {
+      router.push(`/login?redirect=${encodeURIComponent('/events/premier-league-final-table')}`);
+      return;
+    }
+
+    try {
+      setSaveState('saving');
+      await setDoc(
+        doc(db, 'users', user.uid, 'plFinalTablePredictions', 'premier-league-final-table'),
+        {
+          schemaVersion: 1,
+          eventId: 'premier-league-final-table',
+          snapshotJson: JSON.stringify({ selectedByRank }),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      setSaveState('saved');
+      setSavedAt(new Date());
+    } catch (e) {
+      console.error('[PremierLeagueFinalTableEventPage] savePrediction failed', e);
+      setSaveState('idle');
+      alert('保存に失敗しました。もう一度お試しください。');
+    }
+  };
+
+  const formatSavedAt = (d: Date | null) => {
+    if (!d) return '';
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${yyyy}.${mm}.${dd} ${hh}:${mi}`;
+  };
+
   const europeLabelForRank = (rank: number) => {
     if (rank >= 1 && rank <= 5) {
       return {
@@ -407,26 +502,6 @@ export default function PremierLeagueFinalTableEventPage() {
           <div className="text-xs font-semibold tracking-widest text-white/60">EVENT</div>
           <h1 className="mt-1 text-xl font-bold text-white">25/26プレミアリーグ 最終順位予想</h1>
           <p className="mt-2 text-sm text-white/70">順位をタップしてクラブを選び、最終順位を予想してください。</p>
-        </div>
-
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="text-xs font-semibold text-white/60">並べ替え</div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={sharePrediction}
-              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
-            >
-              予想をシェアする
-            </button>
-            <button
-              type="button"
-              onClick={reset}
-              className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
-            >
-              リセット
-            </button>
-          </div>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
@@ -594,6 +669,54 @@ export default function PremierLeagueFinalTableEventPage() {
         ) : null}
 
         <div className="mt-6 text-xs text-white/50">※ チームの成績は更新状況により最新の成績と異なる場合があります。</div>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-[9999]">
+        <div className="mx-auto max-w-3xl px-4 pb-4">
+          <div className="rounded-2xl border border-white/10 bg-black/80 backdrop-blur px-3 py-3">
+            <div className="px-1 pb-2 text-[11px] font-semibold text-white/60">
+              {saveState === 'saving'
+                ? '保存中...'
+                : saveState === 'saved'
+                  ? `保存済み：${formatSavedAt(savedAt)}`
+                  : ''}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              {!user?.uid ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/login?redirect=${encodeURIComponent('/events/premier-league-final-table')}`)}
+                  className="flex-1 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-400"
+                >
+                  ログインして保存
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={savePrediction}
+                  disabled={saveState === 'saving'}
+                  className="flex-1 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-400"
+                >
+                  {saveState === 'saving' ? '保存中...' : '保存'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={sharePrediction}
+                className="flex-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
+              >
+                シェア
+              </button>
+              <button
+                type="button"
+                onClick={reset}
+                className="flex-1 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+              >
+                リセット
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

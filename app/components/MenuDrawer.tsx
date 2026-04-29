@@ -112,20 +112,21 @@ export default function MenuDrawer() {
   const isTopNext = pathname === '/top-next';
   const isTopNextPath = pathname.startsWith('/top-next');
   const isPrivacyPath = pathname.startsWith('/privacy');
+  const isTermsPath = pathname.startsWith('/terms');
   const isTimelinePath = pathname.startsWith('/timeline');
   const isEventsPath = pathname.startsWith('/events');
   const isPlFinalTablePath = pathname.startsWith('/events/premier-league-final-table');
 
-  const activeMenuConfig = isTopNextPath ? topNextMenuConfig : isWc2026Path ? wc2026MenuConfig : menuConfig;
-  const isSpocaleHeader = isWc2026 || isTopNext || isEventsPath || isPrivacyPath || isTimelinePath;
-  const isSpocaleLogoWide = isTopNext || isPrivacyPath || isTimelinePath;
+  const activeMenuConfig = isTopNextPath || isPrivacyPath || isTermsPath ? topNextMenuConfig : isWc2026Path ? wc2026MenuConfig : menuConfig;
+  const isSpocaleHeader = isWc2026 || isTopNext || isEventsPath || isPrivacyPath || isTermsPath || isTimelinePath;
+  const isSpocaleLogoWide = isTopNext || isPrivacyPath || isTermsPath || isTimelinePath;
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const handleSectionClick = (section: string) => {
     setOpenSection(openSection === section ? null : section);
   };
 
-  const shouldHideHamburgerMenu = isPrivacyPath || isTopNextPath || isTimelinePath || isWc2026 || isPlFinalTablePath;
+  const shouldHideHamburgerMenu = isPrivacyPath || isTermsPath || isTopNextPath || isTimelinePath || isWc2026 || isPlFinalTablePath;
 
   return (
     <>
@@ -141,13 +142,13 @@ export default function MenuDrawer() {
           <div className="cursor-default">
             {isSpocaleHeader ? (
               <Image
-                src="/スポカレロゴ.png"
+                src={isTopNextPath ? '/スクリーンショット%202026-04-27%2015.30.23.jpg' : '/スポカレロゴ.png'}
                 alt="スポカレ"
-                width={isSpocaleLogoWide ? 168 : 140}
-                height={isSpocaleLogoWide ? 48 : 40}
+                width={isTopNextPath ? 220 : isSpocaleLogoWide ? 168 : 140}
+                height={isTopNextPath ? 52 : isSpocaleLogoWide ? 48 : 40}
                 priority
-                style={{ height: 'auto' }}
-                sizes={isSpocaleLogoWide ? '168px' : '140px'}
+                style={{ width: 'auto', height: 'auto' }}
+                sizes={isTopNextPath ? '220px' : isSpocaleLogoWide ? '168px' : '140px'}
               />
             ) : (
               <>

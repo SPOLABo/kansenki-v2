@@ -72,6 +72,10 @@ service cloud.firestore {
       match /wc2026SquadPredictions/{countrySlug} {
         allow read, write: if isOwner(userId);
       }
+
+      match /plFinalTablePredictions/{docId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /banners/{bannerId} {

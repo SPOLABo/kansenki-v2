@@ -7,9 +7,10 @@ import { UnifiedPost } from '@/types/post';
 interface PostCardProps {
   post: UnifiedPost;
   priority?: boolean;
+  footer?: React.ReactNode;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, priority = false }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, priority = false, footer = null }) => {
   if (post.imageUrls && post.imageUrls.length > 0) {
     console.log('PostCard Image URL:', post.imageUrls[0]);
   }
@@ -131,6 +132,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, priority = false }) => {
             <span>{postDate}</span>
           </div>
         </div>
+
+        {footer ? <div className="pt-2">{footer}</div> : null}
 
       </div>
     </div>
