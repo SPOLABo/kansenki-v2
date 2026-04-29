@@ -285,11 +285,10 @@ export default function MixedFeedSection() {
       setUser(u);
       if (!u) {
         setLikedWcShareIds({});
-        setLikingWcShareIds({});
       }
     });
     return () => unsub();
-  }, [plCrestByClubId]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -354,7 +353,7 @@ export default function MixedFeedSection() {
         return it;
       })
     );
-  }, [plCrestByClubId]);
+  }, [items, plCrestByClubId]);
 
   useEffect(() => {
     let cancelled = false;
