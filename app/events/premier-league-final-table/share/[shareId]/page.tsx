@@ -169,13 +169,13 @@ export default function PremierLeagueFinalTableSharePage() {
                     key={`${index}-${clubId ?? 'empty'}`}
                     className={'flex items-center gap-3 px-4 py-3 ' + (index === 0 ? '' : 'border-t border-black/10')}
                   >
-                    <div className="w-9 text-center text-sm font-bold text-slate-600">{rank}</div>
+                    <div className="w-9 shrink-0 text-center text-sm font-bold text-slate-600">{rank}</div>
                     {club ? (
                       <>
                         <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
                           <Image src={club.logoSrc} alt={club.nameJa} fill className="object-contain p-1" sizes="32px" />
                         </div>
-                        <div className="truncate text-sm font-semibold text-slate-900">{club.nameJa}</div>
+                        <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">{club.nameJa}</div>
                       </>
                     ) : (
                       <div className="text-sm font-semibold text-slate-400">未選択</div>

@@ -426,6 +426,19 @@ export default function PremierLeagueFinalTableEventPage() {
         { merge: true }
       );
 
+      await setDoc(
+        doc(db, 'plFinalTablePredictionShares', `premier-league-final-table_${user.uid}`),
+        {
+          schemaVersion: 1,
+          eventId: 'premier-league-final-table',
+          snapshotJson: JSON.stringify({ selectedByRank }),
+          ogImageUrl: null,
+          createdByUid: user.uid,
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
       setSaveState('saved');
       setSavedAt(new Date());
     } catch (e) {

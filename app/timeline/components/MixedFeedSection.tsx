@@ -76,6 +76,12 @@ type TimelineAuthor = {
   avatarUrl: string;
 };
 
+async function deleteFeedDoc(args: { kind: 'wc2026' | 'plFinalTable'; id: string }) {
+  const { kind, id } = args;
+  const ref = doc(db, kind === 'wc2026' ? 'wc2026PredictionShares' : 'plFinalTablePredictionShares', id);
+  await deleteDoc(ref);
+}
+
 function escapeXml(s: string) {
   return s
     .replaceAll('&', '&amp;')
@@ -183,21 +189,31 @@ function buildOgpLikePitchSvg(args: {
   return svgDataUrl(svg);
 }
 
-function buildPlFinalTableSvg(args: { selectedByRank: (string | null)[] }) {
+function buildPlFinalTableSvg(args: { selectedByRank: (string | null)[]; crestByClubId?: Record<string, string> }) {
   const W = 1200;
   const H = 630;
   const rows = (args.selectedByRank ?? []).slice(0, 7);
+  const crestByClubId = args.crestByClubId ?? {};
 
   const items = rows
     .map((clubId, idx) => {
       const club = typeof clubId === 'string' ? (premierLeagueClubs as any)[clubId] : null;
       const name = club?.nameJa ? String(club.nameJa) : '未選択';
+      const logoUrl = typeof clubId === 'string' ? crestByClubId[clubId] : '';
       const y = 170 + idx * 64;
+      const crestSize = 40;
+      const crestX = 200;
+      const crestY = Math.round(y - crestSize / 2);
+      const nameX = 260;
       return `
         <g>
-          <rect x="120" y="${y - 34}" width="960" height="56" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.10)" />
-          <text x="160" y="${y}" fill="rgba(255,255,255,0.72)" font-size="22" font-weight="900">${idx + 1}</text>
-          <text x="210" y="${y}" fill="rgba(255,255,255,0.92)" font-size="26" font-weight="900">${escapeXml(name)}</text>
+          <rect x="120" y="${y - 34}" width="960" height="56" rx="18" fill="rgba(255,255,255,0.86)" stroke="rgba(2, 6, 23, 0.10)" />
+          <text x="160" y="${y}" fill="rgba(2, 6, 23, 0.65)" font-size="22" font-weight="900">${idx + 1}</text>
+          ${logoUrl ? `<g>
+            <rect x="${crestX}" y="${crestY}" width="${crestSize}" height="${crestSize}" rx="20" fill="rgba(255,255,255,0.95)" stroke="rgba(2, 6, 23, 0.10)" />
+            <image href="${escapeXml(logoUrl)}" x="${crestX + 6}" y="${crestY + 6}" width="${crestSize - 12}" height="${crestSize - 12}" preserveAspectRatio="xMidYMid meet" />
+          </g>` : ''}
+          <text x="${nameX}" y="${y}" fill="rgba(2, 6, 23, 0.92)" font-size="26" font-weight="900">${escapeXml(name)}</text>
         </g>
       `;
     })
@@ -207,8 +223,9 @@ function buildPlFinalTableSvg(args: { selectedByRank: (string | null)[] }) {
     <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
       <defs>
         <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#111827" stop-opacity="1" />
-          <stop offset="1" stop-color="#000000" stop-opacity="1" />
+          <stop offset="0" stop-color="#f0f9ff" stop-opacity="1" />
+          <stop offset="0.55" stop-color="#e0f2fe" stop-opacity="1" />
+          <stop offset="1" stop-color="#e2e8f0" stop-opacity="1" />
         </linearGradient>
         <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stop-color="#f97316" stop-opacity="0.9" />
@@ -217,12 +234,13 @@ function buildPlFinalTableSvg(args: { selectedByRank: (string | null)[] }) {
       </defs>
 
       <rect x="0" y="0" width="${W}" height="${H}" fill="url(#bg)" />
-      <rect x="0" y="0" width="${W}" height="88" fill="rgba(255,255,255,0.04)" />
-      <rect x="0" y="86" width="${W}" height="2" fill="rgba(255,255,255,0.06)" />
+      <rect x="0" y="0" width="${W}" height="88" fill="rgba(255,255,255,0.70)" />
 
-      <rect x="36" y="30" width="10" height="28" rx="5" fill="url(#accent)" />
-      <text x="60" y="54" fill="rgba(255,255,255,0.90)" font-size="20" font-weight="800">Premier League 最終順位予想</text>
-      <text x="${W - 36}" y="54" fill="rgba(255,255,255,0.55)" font-size="16" font-weight="700" text-anchor="end">TOP 7</text>
+      <g>
+        <rect x="0" y="0" width="10" height="88" fill="url(#accent)" />
+        <text x="28" y="52" fill="rgba(2, 6, 23, 0.92)" font-size="22" font-weight="900">Premier League 最終順位予想</text>
+        <text x="${W - 28}" y="52" fill="rgba(2, 6, 23, 0.55)" font-size="18" font-weight="800" text-anchor="end">TOP 7</text>
+      </g>
 
       ${items}
     </svg>
@@ -255,6 +273,8 @@ export default function MixedFeedSection() {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [authorByUid, setAuthorByUid] = useState<Record<string, TimelineAuthor>>({});
+
+  const [plCrestByClubId, setPlCrestByClubId] = useState<Record<string, string>>({});
   const [wc2026ThumbByShareId, setWc2026ThumbByShareId] = useState<Record<string, string>>({});
   const [user, setUser] = useState<User | null>(null);
   const [likedWcShareIds, setLikedWcShareIds] = useState<Record<string, boolean>>({});
@@ -269,7 +289,72 @@ export default function MixedFeedSection() {
       }
     });
     return () => unsub();
-  }, []);
+  }, [plCrestByClubId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      const clubIds = Array.from(
+        new Set(
+          items
+            .filter((x) => x.kind === 'plFinalTable')
+            .flatMap((x) => ((x as Extract<FeedItem, { kind: 'plFinalTable' }>).selectedByRank ?? []).slice(0, 7))
+            .filter((x): x is string => typeof x === 'string' && Boolean(x))
+        )
+      );
+
+      const missing = clubIds.filter((id) => !plCrestByClubId[id]);
+      if (missing.length === 0) return;
+
+      const next: Record<string, string> = {};
+      for (const clubId of missing) {
+        const club = (premierLeagueClubs as any)[clubId];
+        const logoSrc = club?.logoSrc ? String(club.logoSrc) : '';
+        if (!logoSrc) continue;
+        try {
+          const origin = typeof window !== 'undefined' ? window.location.origin : '';
+          const url = logoSrc.startsWith('/') && origin ? `${origin}${logoSrc}` : logoSrc;
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const blob = await res.blob();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('FileReader failed'));
+            reader.readAsDataURL(blob);
+          });
+          if (dataUrl) next[clubId] = dataUrl;
+        } catch {
+          continue;
+        }
+      }
+
+      if (!cancelled && Object.keys(next).length > 0) {
+        setPlCrestByClubId((prev) => ({ ...prev, ...next }));
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [items, plCrestByClubId]);
+
+  useEffect(() => {
+    if (!items.some((x) => x.kind === 'plFinalTable')) return;
+    if (Object.keys(plCrestByClubId).length === 0) return;
+
+    setItems((prev) =>
+      prev.map((it) => {
+        if (it.kind !== 'plFinalTable') return it;
+        if (typeof it.imageUrl === 'string' && it.imageUrl.startsWith('data:image/svg+xml')) {
+          return { ...it, imageUrl: buildPlFinalTableSvg({ selectedByRank: it.selectedByRank, crestByClubId: plCrestByClubId }) };
+        }
+        return it;
+      })
+    );
+  }, [plCrestByClubId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -441,32 +526,40 @@ export default function MixedFeedSection() {
             return next;
           })(),
           (async () => {
-            const snap = await getDocs(query(collection(db, 'plFinalTablePredictionShares'), orderBy('createdAt', 'desc'), limit(80)));
-            const next: FeedItem[] = snap.docs.map((d) => {
-              const data: any = d.data();
-              const date = toDateMaybe(data?.createdAt);
-              const storedOg = typeof data?.ogImageUrl === 'string' && data.ogImageUrl.trim() ? data.ogImageUrl.trim() : null;
-              const createdByUid = typeof data?.createdByUid === 'string' ? data.createdByUid : '';
+            const plItems: FeedItem[] = await (async () => {
+              try {
+                const q = query(collection(db, 'plFinalTablePredictionShares'), orderBy('createdAt', 'desc'), limit(8));
+                const snaps = await getDocs(q);
+                const next = snaps.docs.map((d) => {
+                  const data: any = d.data();
+                  const date = toDateMaybe(data?.createdAt);
+                  const storedOg = typeof data?.ogImageUrl === 'string' && data.ogImageUrl.trim() ? data.ogImageUrl.trim() : null;
+                  const createdByUid = typeof data?.createdByUid === 'string' ? data.createdByUid : '';
 
-              const raw = typeof data?.snapshotJson === 'string' ? data.snapshotJson : '';
-              const parsed = raw ? (JSON.parse(raw) as any) : null;
-              const selectedByRank = Array.isArray(parsed?.selectedByRank)
-                ? parsed.selectedByRank.map((x: unknown) => (typeof x === 'string' ? x : null))
-                : [];
+                  const raw = typeof data?.snapshotJson === 'string' ? data.snapshotJson : '';
+                  const parsed = raw ? (JSON.parse(raw) as any) : null;
+                  const selectedByRank = Array.isArray(parsed?.selectedByRank)
+                    ? parsed.selectedByRank.map((x: unknown) => (typeof x === 'string' ? x : null))
+                    : [];
 
-              const imageUrl = storedOg ?? buildPlFinalTableSvg({ selectedByRank });
-              return {
-                kind: 'plFinalTable' as const,
-                id: d.id,
-                date,
-                createdByUid,
-                href: `/events/premier-league-final-table/share/${encodeURIComponent(d.id)}`,
-                imageUrl,
-                selectedByRank,
-                title: 'Premier League 最終順位予想',
-              };
-            });
-            return next;
+                  const imageUrl = storedOg ?? buildPlFinalTableSvg({ selectedByRank, crestByClubId: plCrestByClubId });
+                  return {
+                    kind: 'plFinalTable' as const,
+                    id: d.id,
+                    date,
+                    createdByUid,
+                    href: `/events/premier-league-final-table/share/${encodeURIComponent(d.id)}`,
+                    imageUrl,
+                    selectedByRank,
+                    title: 'Premier League 最終順位予想',
+                  };
+                });
+                return next;
+              } catch {
+                return [];
+              }
+            })();
+            return plItems;
           })(),
         ]);
 
@@ -700,11 +793,39 @@ export default function MixedFeedSection() {
           <div className="space-y-3">
             {shown.map((it) => {
               if (it.kind === 'post') {
+                const canDelete = Boolean(user?.uid && it.post?.authorId && user.uid === it.post.authorId);
                 return (
                   <div key={`post-${it.id}`} className="rounded-2xl overflow-hidden">
                     <PostCard
                       post={it.post}
-                      footer={<PostActions3 postId={it.post.id} collectionName={it.post.collectionName} />}
+                      footer={
+                        <div>
+                          {canDelete ? (
+                            <div className="flex justify-end px-3 pt-2">
+                              <button
+                                type="button"
+                                className="text-[11px] font-bold text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300"
+                                onClick={() => {
+                                  const ok = window.confirm('この投稿を削除しますか？');
+                                  if (!ok) return;
+                                  void (async () => {
+                                    try {
+                                      await deleteDoc(doc(db, it.post.collectionName, it.post.id));
+                                      setItems((prev) => prev.filter((x) => !(x.kind === 'post' && x.id === it.id)));
+                                    } catch (err) {
+                                      console.error('[MixedFeedSection] delete post failed', err);
+                                      alert('削除に失敗しました。もう一度お試しください。');
+                                    }
+                                  })();
+                                }}
+                              >
+                                削除
+                              </button>
+                            </div>
+                          ) : null}
+                          <PostActions3 postId={it.post.id} collectionName={it.post.collectionName} />
+                        </div>
+                      }
                     />
                   </div>
                 );
@@ -717,6 +838,7 @@ export default function MixedFeedSection() {
                 const iconBase = 'w-4 h-4';
                 const liked = Boolean(likedWcShareIds[it.id]);
                 const likeBusy = Boolean(likingWcShareIds[it.id]);
+                const canDelete = Boolean(user?.uid && it.createdByUid && user.uid === it.createdByUid);
                 return (
                   <Link
                     key={`wc-${it.id}`}
@@ -748,6 +870,32 @@ export default function MixedFeedSection() {
                         <div className="text-[11px] text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
                       </div>
                       {it.comment ? <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{it.comment}</div> : null}
+
+                      {canDelete ? (
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            type="button"
+                            className="text-[11px] font-bold text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const ok = window.confirm('この投稿を削除しますか？');
+                              if (!ok) return;
+                              void (async () => {
+                                try {
+                                  await deleteFeedDoc({ kind: 'wc2026', id: it.id });
+                                  setItems((prev) => prev.filter((x) => !(x.kind === 'wc2026' && x.id === it.id)));
+                                } catch (err) {
+                                  console.error('[MixedFeedSection] delete wc2026 share failed', err);
+                                  alert('削除に失敗しました。もう一度お試しください。');
+                                }
+                              })();
+                            }}
+                          >
+                            削除
+                          </button>
+                        </div>
+                      ) : null}
 
                       <div className="mt-2 flex items-center gap-5 text-xs text-gray-500 dark:text-gray-400">
                         <div className="inline-flex items-center gap-2" aria-label="コメント数">
@@ -799,6 +947,7 @@ export default function MixedFeedSection() {
               }
 
               const author = it.createdByUid ? authorByUid[it.createdByUid] : undefined;
+              const canDelete = Boolean(user?.uid && it.createdByUid && user.uid === it.createdByUid);
               return (
                 <Link
                   key={`pl-${it.id}`}
@@ -822,21 +971,29 @@ export default function MixedFeedSection() {
                     </div>
                     <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">25/26シーズンの最終順位予想</div>
 
-                    {Array.isArray(it.selectedByRank) && it.selectedByRank.length > 0 ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {it.selectedByRank.slice(0, 7).map((clubId, idx) => {
-                          const club = typeof clubId === 'string' ? (premierLeagueClubs as any)[clubId] : null;
-                          const src = club?.logoSrc ? String(club.logoSrc) : '';
-                          const name = club?.nameJa ? String(club.nameJa) : '';
-                          if (!src) return null;
-                          return (
-                            <div key={`${it.id}-crest-${idx}`} className="flex items-center gap-1">
-                              <div className="relative w-5 h-5 rounded-full overflow-hidden border border-gray-200 dark:border-gray-800 bg-white">
-                                <Image src={src} alt={name || 'club'} fill sizes="20px" className="object-contain" />
-                              </div>
-                            </div>
-                          );
-                        })}
+                    {canDelete ? (
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          className="text-[11px] font-bold text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const ok = window.confirm('この投稿を削除しますか？');
+                            if (!ok) return;
+                            void (async () => {
+                              try {
+                                await deleteFeedDoc({ kind: 'plFinalTable', id: it.id });
+                                setItems((prev) => prev.filter((x) => !(x.kind === 'plFinalTable' && x.id === it.id)));
+                              } catch (err) {
+                                console.error('[MixedFeedSection] delete pl share failed', err);
+                                alert('削除に失敗しました。もう一度お試しください。');
+                              }
+                            })();
+                          }}
+                        >
+                          削除
+                        </button>
                       </div>
                     ) : null}
 

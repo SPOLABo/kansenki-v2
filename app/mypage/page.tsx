@@ -11,7 +11,7 @@ import { UserPostsTabs } from '@/components/user/UserPostsTabs';
 import { Button } from '@/components/ui/button';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, orderBy, query, Timestamp, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toPng } from 'html-to-image';
 import type { SquadPlayerPrediction } from '@/types/worldcup';
@@ -27,6 +27,12 @@ import { Wc2026PitchOgpCapture } from '@/app/worldcup/2026/[country]/_components
 function MyPageContent({ user }: { user: User }) {
   const router = useRouter();
   const userProfileProps = useUserProfile(user);
+
+  const [myWc2026Shares, setMyWc2026Shares] = useState<
+    { id: string; countrySlug: string; countryNameJa: string; updatedAt: Date | null; comment: string }[]
+  >([]);
+  const [myPlShares, setMyPlShares] = useState<{ id: string; createdAt: Date | null }[]>([]);
+  const [mySharesLoading, setMySharesLoading] = useState(false);
 
   const [wc2026Saved, setWc2026Saved] = useState<
     { countrySlug: string; updatedAt: Date | null; comment?: string; players: SquadPlayerPrediction[]; pitchOverrideBySlot: Record<string, string> }[]
@@ -73,6 +79,64 @@ function MyPageContent({ user }: { user: User }) {
       }
     };
     run();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.uid]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setMySharesLoading(true);
+      try {
+        const [wcSnap, plSnap] = await Promise.all([
+          getDocs(
+            query(
+              collection(db, 'wc2026PredictionShares'),
+              where('createdByUid', '==', user.uid),
+              orderBy('updatedAt', 'desc'),
+              limit(20)
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, 'plFinalTablePredictionShares'),
+              where('createdByUid', '==', user.uid),
+              orderBy('createdAt', 'desc'),
+              limit(20)
+            )
+          ),
+        ]);
+
+        const wcItems = wcSnap.docs.map((d) => {
+          const data: any = d.data();
+          const countrySlug = typeof data?.countrySlug === 'string' ? data.countrySlug : '';
+          const countryNameJa = typeof data?.countryNameJa === 'string' ? data.countryNameJa : countrySlug;
+          const updatedAt = data?.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : null;
+          const comment = typeof data?.comment === 'string' ? data.comment : '';
+          return { id: d.id, countrySlug, countryNameJa, updatedAt, comment };
+        });
+
+        const plItems = plSnap.docs.map((d) => {
+          const data: any = d.data();
+          const createdAt = data?.createdAt instanceof Timestamp ? data.createdAt.toDate() : null;
+          return { id: d.id, createdAt };
+        });
+
+        if (!cancelled) {
+          setMyWc2026Shares(wcItems);
+          setMyPlShares(plItems);
+        }
+      } catch {
+        if (!cancelled) {
+          setMyWc2026Shares([]);
+          setMyPlShares([]);
+        }
+      } finally {
+        if (!cancelled) setMySharesLoading(false);
+      }
+    };
+    void run();
     return () => {
       cancelled = true;
     };
@@ -257,6 +321,92 @@ function MyPageContent({ user }: { user: User }) {
                 {p.comment ? <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{p.comment}</div> : null}
                 <div className="mt-1 text-[11px] text-gray-500">{p.updatedAt ? `更新：${p.updatedAt.toLocaleString('ja-JP')}` : ''}</div>
               </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-8">
+        <div className="text-base font-bold">共有した予想</div>
+        {mySharesLoading ? (
+          <div className="mt-2 text-sm text-gray-500">読み込み中...</div>
+        ) : myWc2026Shares.length === 0 && myPlShares.length === 0 ? (
+          <div className="mt-2 text-sm text-gray-500">まだ共有がありません</div>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {myWc2026Shares.map((s) => (
+              <div
+                key={`my-share-wc-${s.id}`}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm dark:border-gray-800 dark:bg-gray-950"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    className="text-sm font-bold text-gray-900 truncate dark:text-gray-100 hover:underline"
+                    onClick={() => router.push(`/worldcup/2026/${encodeURIComponent(s.countrySlug)}/share/${encodeURIComponent(s.id)}`)}
+                  >
+                    W杯2026：{s.countryNameJa}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-[11px] font-bold text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300"
+                    onClick={() => {
+                      const ok = window.confirm('この共有を削除しますか？');
+                      if (!ok) return;
+                      void (async () => {
+                        try {
+                          await deleteDoc(doc(db, 'wc2026PredictionShares', s.id));
+                          setMyWc2026Shares((prev) => prev.filter((x) => x.id !== s.id));
+                        } catch (err) {
+                          console.error('[mypage] delete wc2026 share failed', err);
+                          alert('削除に失敗しました。もう一度お試しください。');
+                        }
+                      })();
+                    }}
+                  >
+                    削除
+                  </button>
+                </div>
+                {s.comment ? <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{s.comment}</div> : null}
+                <div className="mt-1 text-[11px] text-gray-500">更新：{s.updatedAt ? s.updatedAt.toLocaleString('ja-JP') : ''}</div>
+              </div>
+            ))}
+
+            {myPlShares.map((s) => (
+              <div
+                key={`my-share-pl-${s.id}`}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm dark:border-gray-800 dark:bg-gray-950"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    className="text-sm font-bold text-gray-900 truncate dark:text-gray-100 hover:underline"
+                    onClick={() => router.push(`/events/premier-league-final-table/share/${encodeURIComponent(s.id)}`)}
+                  >
+                    Premier League 最終順位予想
+                  </button>
+                  <button
+                    type="button"
+                    className="text-[11px] font-bold text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300"
+                    onClick={() => {
+                      const ok = window.confirm('この共有を削除しますか？');
+                      if (!ok) return;
+                      void (async () => {
+                        try {
+                          await deleteDoc(doc(db, 'plFinalTablePredictionShares', s.id));
+                          setMyPlShares((prev) => prev.filter((x) => x.id !== s.id));
+                        } catch (err) {
+                          console.error('[mypage] delete pl share failed', err);
+                          alert('削除に失敗しました。もう一度お試しください。');
+                        }
+                      })();
+                    }}
+                  >
+                    削除
+                  </button>
+                </div>
+                <div className="mt-1 text-[11px] text-gray-500">作成：{s.createdAt ? s.createdAt.toLocaleString('ja-JP') : ''}</div>
+              </div>
             ))}
           </div>
         )}
