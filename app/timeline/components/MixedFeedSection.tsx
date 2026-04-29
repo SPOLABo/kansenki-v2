@@ -34,6 +34,7 @@ type FeedItem =
       countryNameJa: string;
       href: string;
       imageUrl: string | null;
+      fallbackImageUrl: string | null;
       comment: string;
     }
   | {
@@ -66,9 +67,17 @@ function svgDataUrl(svg: string) {
 }
 
 function surnameOnly(name: string) {
-  const parts = name.split(/[\s　]+/).filter(Boolean);
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  const parts = trimmed.split(/\s+/);
   if (parts.length >= 2) return parts[0];
   return name;
+}
+
+function truncateLabel(s: string, max: number) {
+  const t = s.trim();
+  if (!t) return '';
+  return t.length > max ? `${t.slice(0, Math.max(0, max - 1))}…` : t;
 }
 
 function buildOgpLikePitchSvg(args: {
@@ -80,14 +89,15 @@ function buildOgpLikePitchSvg(args: {
   const W = 1200;
   const H = 630;
 
-  const pillW = 520;
-  const pillH = 56;
-  const pillRx = 28;
+  const pillW = 320;
+  const pillH = 44;
+  const pillRx = 22;
 
   const nodes = FORMATION_3421_SLOTS.map((slot) => {
     const key = slot.key as FormationSlotKey;
     const p = assigned[key];
-    const label = p ? surnameOnly(p.name) : slot.label;
+    const labelRaw = p ? surnameOnly(p.name) : slot.label;
+    const label = truncateLabel(labelRaw, 8);
     const mark = p ? statusMark(p.status as SquadStatus) : '';
     const x = Math.round((slot.leftPct / 100) * W);
     const y = Math.round((slot.topPct / 100) * (H - 64) + 64);
@@ -95,14 +105,17 @@ function buildOgpLikePitchSvg(args: {
     const py = y - pillH / 2;
 
     const markColor = p && (p.status === 'S' || p.status === '!?') ? 'rgba(253, 230, 138, 0.95)' : 'rgba(255,255,255,0.65)';
-    const nameX = x - pillW / 2 + (mark ? 76 : 34);
+    const nameX = x - pillW / 2 + (mark ? 58 : 24);
+
+    const nameFontSize = label.length >= 8 ? 16 : label.length >= 7 ? 18 : 20;
+    const emptyFontSize = label.length >= 8 ? 14 : 16;
 
     const nameText = p
-      ? `<text x="${nameX}" y="${y + 1}" text-anchor="start" dominant-baseline="middle" fill="rgba(255,255,255,0.92)" font-size="24" font-weight="800">${escapeXml(label)}</text>`
-      : `<text x="${x}" y="${y + 1}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.62)" font-size="22" font-weight="800">${escapeXml(label)}</text>`;
+      ? `<text x="${nameX}" y="${y + 1}" text-anchor="start" dominant-baseline="middle" fill="rgba(255,255,255,0.92)" font-size="${nameFontSize}" font-weight="800">${escapeXml(label)}</text>`
+      : `<text x="${x}" y="${y + 1}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.62)" font-size="${emptyFontSize}" font-weight="800">${escapeXml(label)}</text>`;
 
     const markText = mark
-      ? `<text x="${x - pillW / 2 + 34}" y="${y + 1}" text-anchor="start" dominant-baseline="middle" fill="${markColor}" font-size="24" font-weight="900">${escapeXml(mark)}</text>`
+      ? `<text x="${x - pillW / 2 + 22}" y="${y + 1}" text-anchor="start" dominant-baseline="middle" fill="${markColor}" font-size="20" font-weight="900">${escapeXml(mark)}</text>`
       : '';
 
     return `<g>
@@ -351,7 +364,13 @@ export default function MixedFeedSection() {
                   if (p) assigned[slot] = p;
                 }
 
-                const imageUrl = players.length > 0 ? buildOgpLikePitchSvg({ countryNameJa: country?.nameJa ?? 'W杯2026', assigned }) : null;
+                const imageUrl = countrySlug
+                  ? `/api/wc2026-og/${encodeURIComponent(countrySlug)}/${encodeURIComponent(d.id)}?mode=pitch`
+                  : null;
+
+                const fallbackImageUrl = players.length > 0
+                  ? buildOgpLikePitchSvg({ countryNameJa: country?.nameJa ?? 'W杯2026', assigned })
+                  : null;
 
                 const comment = typeof parsed?.comment === 'string' ? parsed.comment : '';
                 const trimmedComment = comment.trim().slice(0, 120);
@@ -364,6 +383,7 @@ export default function MixedFeedSection() {
                   countryNameJa: country?.nameJa ?? 'W杯2026',
                   href: `/worldcup/2026/${countrySlug}/share/${d.id}`,
                   imageUrl,
+                  fallbackImageUrl,
                   comment: trimmedComment,
                 };
               })
@@ -468,85 +488,29 @@ export default function MixedFeedSection() {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/10 overflow-hidden mb-4">
       <div className="p-4">
-        <div>
-          <div className="text-sm text-gray-100">みんなの投稿</div>
-          <div className="text-xs text-gray-300">観戦記 / 予想 など</div>
-        </div>
+        {loading ? (
+          <div className="mt-4 text-xs text-gray-300">読み込み中...</div>
+        ) : shown.length === 0 ? (
+          <div className="mt-4 text-xs text-gray-300">まだ投稿がありません</div>
+        ) : (
+          <div className="space-y-3">
+            {shown.map((it) => {
+              if (it.kind === 'post') {
+                return (
+                  <div key={`post-${it.id}`} className="rounded-2xl overflow-hidden">
+                    <PostCard
+                      post={it.post}
+                      footer={<PostActions3 postId={it.post.id} collectionName={it.post.collectionName} />}
+                    />
+                  </div>
+                );
+              }
 
-        <div className="mt-4">
-          {loading ? (
-            <div className="text-xs text-gray-300">読み込み中...</div>
-          ) : shown.length === 0 ? (
-            <div className="text-xs text-gray-300">まだ投稿がありません</div>
-          ) : (
-            <div className="space-y-3">
-              {shown.map((it) => {
-                if (it.kind === 'post') {
-                  return (
-                    <div key={`post-${it.id}`} className="rounded-2xl overflow-hidden">
-                      <PostCard
-                        post={it.post}
-                        footer={
-                          <PostActions3 postId={it.post.id} collectionName={it.post.collectionName} />
-                        }
-                      />
-                    </div>
-                  );
-                }
-
-                if (it.kind === 'wc2026') {
-                  const author = it.createdByUid ? authorByUid[it.createdByUid] : undefined;
-                  return (
-                    <Link
-                      key={`wc-${it.id}`}
-                      href={it.href}
-                      className="block w-full rounded-xl border border-gray-200 bg-white text-left shadow-sm hover:bg-gray-50 transition-colors overflow-hidden dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900"
-                    >
-                      {it.imageUrl ? (
-                        <div className="px-4 pt-3">
-                          <img
-                            src={it.imageUrl}
-                            alt="スタメン予想"
-                            className="w-full rounded-lg border border-gray-200 dark:border-gray-800"
-                            loading="lazy"
-                          />
-                        </div>
-                      ) : null}
-                      <div className="px-4 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-sm font-bold text-gray-900 truncate dark:text-gray-100">W杯2026：{it.countryNameJa}</div>
-                          <div className="text-[11px] text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
-                        </div>
-                        {it.comment ? <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{it.comment}</div> : null}
-
-                        {author && it.createdByUid ? (
-                          <div className="mt-3 flex items-center text-xs text-gray-500 dark:text-gray-400">
-                            <Link
-                              href={`/user/${it.createdByUid}`}
-                              className="flex items-center gap-2 truncate no-underline text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                            >
-                              <div className="relative w-5 h-5 rounded-full overflow-hidden border border-gray-200 dark:border-gray-800">
-                                <Image
-                                  src={author.avatarUrl || '/default-avatar.svg'}
-                                  alt={author.name}
-                                  fill
-                                  sizes="20px"
-                                  className="object-cover"
-                                />
-                              </div>
-                              <span className="truncate">{author.name}</span>
-                            </Link>
-                          </div>
-                        ) : null}
-                      </div>
-                    </Link>
-                  );
-                }
-
+              if (it.kind === 'wc2026') {
                 const author = it.createdByUid ? authorByUid[it.createdByUid] : undefined;
                 return (
                   <Link
-                    key={`pl-${it.id}`}
+                    key={`wc-${it.id}`}
                     href={it.href}
                     className="block w-full rounded-xl border border-gray-200 bg-white text-left shadow-sm hover:bg-gray-50 transition-colors overflow-hidden dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900"
                   >
@@ -554,18 +518,27 @@ export default function MixedFeedSection() {
                       <div className="px-4 pt-3">
                         <img
                           src={it.imageUrl}
-                          alt={it.title}
+                          alt="スタメン予想"
                           className="w-full rounded-lg border border-gray-200 dark:border-gray-800"
                           loading="lazy"
+                          onError={(e) => {
+                            try {
+                              if (it.fallbackImageUrl && e.currentTarget.src !== it.fallbackImageUrl) {
+                                e.currentTarget.src = it.fallbackImageUrl;
+                              }
+                            } catch {
+                              // ignore
+                            }
+                          }}
                         />
                       </div>
                     ) : null}
                     <div className="px-4 py-3">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-sm font-bold text-gray-900 truncate dark:text-gray-100">{it.title}</div>
+                        <div className="text-sm font-bold text-gray-900 truncate dark:text-gray-100">W杯2026：{it.countryNameJa}</div>
                         <div className="text-[11px] text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
                       </div>
-                      <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">25/26シーズンの最終順位予想</div>
+                      {it.comment ? <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{it.comment}</div> : null}
 
                       {author && it.createdByUid ? (
                         <div className="mt-3 flex items-center text-xs text-gray-500 dark:text-gray-400">
@@ -589,10 +562,75 @@ export default function MixedFeedSection() {
                     </div>
                   </Link>
                 );
-              })}
-            </div>
-          )}
-        </div>
+              }
+
+              const author = it.createdByUid ? authorByUid[it.createdByUid] : undefined;
+              return (
+                <Link
+                  key={`pl-${it.id}`}
+                  href={it.href}
+                  className="block w-full rounded-xl border border-gray-200 bg-white text-left shadow-sm hover:bg-gray-50 transition-colors overflow-hidden dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900"
+                >
+                  {it.imageUrl ? (
+                    <div className="px-4 pt-3">
+                      <img
+                        src={it.imageUrl}
+                        alt={it.title}
+                        className="w-full rounded-lg border border-gray-200 dark:border-gray-800"
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : null}
+                  <div className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm font-bold text-gray-900 truncate dark:text-gray-100">{it.title}</div>
+                      <div className="text-[11px] text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">25/26シーズンの最終順位予想</div>
+
+                    {Array.isArray(it.selectedByRank) && it.selectedByRank.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {it.selectedByRank.slice(0, 7).map((clubId, idx) => {
+                          const club = typeof clubId === 'string' ? (premierLeagueClubs as any)[clubId] : null;
+                          const src = club?.logoSrc ? String(club.logoSrc) : '';
+                          const name = club?.nameJa ? String(club.nameJa) : '';
+                          if (!src) return null;
+                          return (
+                            <div key={`${it.id}-crest-${idx}`} className="flex items-center gap-1">
+                              <div className="relative w-5 h-5 rounded-full overflow-hidden border border-gray-200 dark:border-gray-800 bg-white">
+                                <Image src={src} alt={name || 'club'} fill sizes="20px" className="object-contain" />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+
+                    {author && it.createdByUid ? (
+                      <div className="mt-3 flex items-center text-xs text-gray-500 dark:text-gray-400">
+                        <Link
+                          href={`/user/${it.createdByUid}`}
+                          className="flex items-center gap-2 truncate no-underline text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        >
+                          <div className="relative w-5 h-5 rounded-full overflow-hidden border border-gray-200 dark:border-gray-800">
+                            <Image
+                              src={author.avatarUrl || '/default-avatar.svg'}
+                              alt={author.name}
+                              fill
+                              sizes="20px"
+                              className="object-cover"
+                            />
+                          </div>
+                          <span className="truncate">{author.name}</span>
+                        </Link>
+                      </div>
+                    ) : null}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

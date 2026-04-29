@@ -10,6 +10,11 @@ import { premierLeagueClubs } from '@/lib/clubMaster';
 import { manualFixtures } from '@/lib/fixtures/manualFixtures';
 import { db, storage } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { BottomActionBar } from './components/BottomActionBar';
+import { ClubPickerModal } from './components/ClubPickerModal';
+import { OgpCapturePlFinalTable } from './components/OgpCapturePlFinalTable';
+import { PremierLeagueFinalTableHeader } from './components/PremierLeagueFinalTableHeader';
+import { RankSelectionList } from './components/RankSelectionList';
 
 type ClubRow = {
   id: string;
@@ -445,279 +450,78 @@ export default function PremierLeagueFinalTableEventPage() {
       return {
         shortLabel: 'CL',
         barClassName: 'bg-blue-500',
-        pillClassName: 'bg-blue-500/15 text-blue-200 border-blue-500/30',
+        pillClassName: 'bg-blue-500/10 text-blue-700 border-blue-600/20',
       };
     }
     if (rank === 6) {
       return {
         shortLabel: 'EL',
         barClassName: 'bg-orange-500',
-        pillClassName: 'bg-orange-500/15 text-orange-200 border-orange-500/30',
+        pillClassName: 'bg-orange-500/10 text-orange-700 border-orange-600/20',
       };
     }
     if (rank === 7) {
       return {
         shortLabel: 'ECL',
         barClassName: 'bg-emerald-500',
-        pillClassName: 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30',
+        pillClassName: 'bg-emerald-500/10 text-emerald-700 border-emerald-600/20',
       };
     }
     return null;
   };
 
   return (
-    <main className="min-h-screen bg-black">
+    <main className="min-h-screen bg-gradient-to-b from-sky-50 via-sky-100 to-slate-200">
       <div className="mx-auto max-w-3xl px-4 py-6">
-        <div className="fixed left-[-99999px] top-0 h-[630px] w-[1200px] overflow-hidden">
-          <div id="pl-final-table-ogp-capture" className="h-[630px] w-[1200px] bg-black px-16 py-14">
-            <div className="text-sm font-semibold tracking-widest text-white/60">SHARE</div>
-            <div className="mt-3 text-5xl font-black text-white">25/26プレミアリーグ 最終順位予想</div>
-            <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-              {selectedByRank.slice(0, 7).map((clubId, index) => {
-                const club = typeof clubId === 'string' ? premierLeagueClubs[clubId as keyof typeof premierLeagueClubs] : null;
-                return (
-                  <div key={`${index}-${clubId ?? 'empty'}`} className={'flex items-center gap-5 px-8 py-5 ' + (index === 0 ? '' : 'border-t border-white/10')}>
-                    <div className="w-14 text-center text-3xl font-black text-white/80">{index + 1}</div>
-                    {club ? (
-                      <>
-                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-white">
-                          <Image src={club.logoSrc} alt={club.nameJa} fill className="object-contain p-2" sizes="64px" />
-                        </div>
-                        <div className="truncate text-3xl font-extrabold text-white">{club.nameJa}</div>
-                      </>
-                    ) : (
-                      <div className="text-3xl font-extrabold text-white/30">未選択</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-8 text-xl font-semibold text-white/70">kansenki.footballtop.net</div>
-          </div>
-        </div>
+        <OgpCapturePlFinalTable selectedByRank={selectedByRank} />
         <Suspense fallback={null}>
           <SearchParamRestore clubs={clubs} onRestore={setSelectedByRank} />
         </Suspense>
-        <div className="mb-5">
-          <div className="text-xs font-semibold tracking-widest text-white/60">EVENT</div>
-          <h1 className="mt-1 text-xl font-bold text-white">25/26プレミアリーグ 最終順位予想</h1>
-          <p className="mt-2 text-sm text-white/70">順位をタップしてクラブを選び、最終順位を予想してください。</p>
-        </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-          {selectedByRank.map((clubId, index) => {
-            const rank = index + 1;
-            const europe = europeLabelForRank(rank);
-            const club = clubId ? clubById.get(clubId) : null;
-            return (
-              <div
-                key={`${index}-${clubId ?? 'empty'}`}
-                className={
-                  'flex items-center gap-3 px-4 py-3 ' +
-                  (index === 0 ? '' : 'border-t border-white/10')
-                }
-              >
-                <div className="flex items-center gap-2">
-                  <div className={"h-9 w-1.5 rounded-full " + (europe ? europe.barClassName : 'bg-white/5')} />
-                  {europe ? (
-                    <div
-                      className={
-                        'rounded-full border px-2 py-1 text-[10px] font-bold leading-none ' +
-                        europe.pillClassName
-                      }
-                    >
-                      {europe.shortLabel}
-                    </div>
-                  ) : (
-                    <div className="w-10" />
-                  )}
-                </div>
-
-                <div className="w-9 text-center text-sm font-bold text-white/80">{rank}</div>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveRankIndex(index)}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-white/5"
-                  aria-label={`${rank}位を選択`}
-                >
-                  {club ? (
-                    <>
-                      <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
-                        <Image src={club.logoSrc} alt={club.nameJa} fill className="object-contain p-1" sizes="32px" />
-                      </div>
-                      <div className="truncate text-sm font-semibold text-white">{club.nameJa}</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dashed border-white/30 text-[10px] font-bold text-white/60">
-                        TAP
-                      </div>
-                      <div className="text-sm font-semibold text-white/50">未選択</div>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedByRank((prev) => {
-                      const next = [...prev];
-                      next[index] = null;
-                      return next;
-                    });
-                  }}
-                  disabled={!clubId}
-                  className={
-                    'shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ' +
-                    (clubId ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-white/5 text-white/20')
-                  }
-                >
-                  クリア
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <PremierLeagueFinalTableHeader />
+        <RankSelectionList
+          selectedByRank={selectedByRank}
+          clubById={clubById}
+          europeLabelForRank={europeLabelForRank}
+          onOpenRank={(rankIndex) => setActiveRankIndex(rankIndex)}
+          onClearRank={(rankIndex) => {
+            setSelectedByRank((prev) => {
+              const next = [...prev];
+              next[rankIndex] = null;
+              return next;
+            });
+          }}
+        />
 
         {activeRankIndex !== null ? (
-          <div className="fixed inset-0 z-[10000]">
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/60"
-              onClick={() => setActiveRankIndex(null)}
-              aria-label="閉じる"
-            />
-            <div className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-hidden rounded-t-3xl border-t border-white/10 bg-black">
-              <div className="flex items-center justify-between px-5 py-4">
-                <div className="text-sm font-bold text-white">クラブを選択（4/24時点）</div>
-                <button
-                  type="button"
-                  onClick={() => setActiveRankIndex(null)}
-                  className="rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/15"
-                >
-                  閉じる
-                </button>
-              </div>
-
-              <div className="max-h-[calc(80vh-64px)] overflow-y-auto px-4 pb-6">
-                <div className="grid grid-cols-1 gap-2">
-                  {selectableClubs.map((c) => {
-                    const alreadySelectedIndex = selectedByRank.findIndex((id) => id === c.id);
-                    const disabled = alreadySelectedIndex !== -1 && alreadySelectedIndex !== activeRankIndex;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => {
-                          setSelectedByRank((prev) => {
-                            const next = [...prev];
-                            next[activeRankIndex] = c.id;
-                            return next;
-                          });
-                          setActiveRankIndex(null);
-                        }}
-                        className={
-                          'flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ' +
-                          (disabled
-                            ? 'border-white/5 bg-white/5 text-white/30'
-                            : 'border-white/10 bg-white/5 text-white hover:bg-white/10')
-                        }
-                      >
-                        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
-                          <Image src={c.logoSrc} alt={c.nameJa} fill className="object-contain p-1" sizes="32px" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="truncate text-sm font-semibold">{c.nameJa}</div>
-
-                            <div className="flex items-center gap-2">
-                              <div className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold text-white/80">
-                                {typeof c.points === 'number' ? c.points : '-'}
-                              </div>
-
-                              <div className="flex max-w-[45vw] items-center gap-1 overflow-x-auto">
-                                {c.upcomingOpponentIds.slice(0, 8).map((oppId) => {
-                                  const opp = clubById.get(oppId);
-                                  if (!opp) return null;
-                                  return (
-                                    <div
-                                      key={`${c.id}-${oppId}`}
-                                      className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white"
-                                      title={opp.nameJa}
-                                      aria-label={opp.nameJa}
-                                    >
-                                      <Image src={opp.logoSrc} alt={opp.nameJa} fill className="object-contain p-0.5" sizes="24px" />
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                          {disabled ? (
-                            <div className="mt-1 text-xs text-white/40">選択済み（{alreadySelectedIndex + 1}位）</div>
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
+          <ClubPickerModal
+            activeRankIndex={activeRankIndex}
+            onClose={() => setActiveRankIndex(null)}
+            selectableClubs={selectableClubs}
+            selectedByRank={selectedByRank}
+            clubById={clubById}
+            onPickClub={(clubId) => {
+              setSelectedByRank((prev) => {
+                const next = [...prev];
+                next[activeRankIndex] = clubId;
+                return next;
+              });
+              setActiveRankIndex(null);
+            }}
+          />
         ) : null}
 
-        <div className="mt-6 text-xs text-white/50">※ チームの成績は更新状況により最新の成績と異なる場合があります。</div>
+        <div className="mt-6 text-xs text-slate-500">※ チームの成績は更新状況により最新の成績と異なる場合があります。</div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-[9999]">
-        <div className="mx-auto max-w-3xl px-4 pb-4">
-          <div className="rounded-2xl border border-white/10 bg-black/80 backdrop-blur px-3 py-3">
-            <div className="px-1 pb-2 text-[11px] font-semibold text-white/60">
-              {saveState === 'saving'
-                ? '保存中...'
-                : saveState === 'saved'
-                  ? `保存済み：${formatSavedAt(savedAt)}`
-                  : ''}
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              {!user?.uid ? (
-                <button
-                  type="button"
-                  onClick={() => router.push(`/login?redirect=${encodeURIComponent('/events/premier-league-final-table')}`)}
-                  className="flex-1 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-400"
-                >
-                  ログインして保存
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={savePrediction}
-                  disabled={saveState === 'saving'}
-                  className="flex-1 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-400"
-                >
-                  {saveState === 'saving' ? '保存中...' : '保存'}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={sharePrediction}
-                className="flex-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90"
-              >
-                シェア
-              </button>
-              <button
-                type="button"
-                onClick={reset}
-                className="flex-1 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
-              >
-                リセット
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <BottomActionBar
+        saveState={saveState}
+        savedAtText={formatSavedAt(savedAt)}
+        isLoggedIn={Boolean(user?.uid)}
+        onSave={savePrediction}
+        onShare={sharePrediction}
+        onReset={reset}
+      />
     </main>
   );
 }
