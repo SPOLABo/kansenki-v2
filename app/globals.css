@@ -11,6 +11,7 @@
 /* グローバルなbodyスタイル */
 body {
   min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
 }
 
 /* react-datepicker-custom.css */
