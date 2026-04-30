@@ -23,9 +23,9 @@ export default function BottomTabBar() {
   const visibleTabs = tabs;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-slate-950/80 backdrop-blur">
+    <nav className="fixed bottom-0 left-0 right-0 z-[9999] pointer-events-auto touch-manipulation border-t border-white/10 bg-slate-950/80 backdrop-blur">
       <div
-        className="mx-auto grid max-w-xl px-2 py-2"
+        className="mx-auto grid max-w-xl px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]"
         style={{ gridTemplateColumns: `repeat(${Math.max(1, visibleTabs.length)}, minmax(0, 1fr))` }}
       >
         {visibleTabs.map((t) => {

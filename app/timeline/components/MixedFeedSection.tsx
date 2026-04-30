@@ -844,6 +844,29 @@ export default function MixedFeedSection() {
                     href={it.href}
                     className="block w-full rounded-xl border border-gray-200 bg-white text-left shadow-sm hover:bg-gray-50 transition-colors overflow-hidden dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900"
                   >
+                    {author && it.createdByUid ? (
+                      <div className="px-4 pt-4 pb-2 flex items-center gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="relative w-9 h-9 rounded-full overflow-hidden border border-gray-200 dark:border-gray-800 shrink-0">
+                            <Image
+                              src={author.avatarUrl || '/default-avatar.svg'}
+                              alt={author.name}
+                              fill
+                              sizes="36px"
+                              className="object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-bold text-gray-900 truncate dark:text-gray-100">{author.name}</div>
+                          </div>
+                        </div>
+                        <div className="ml-auto shrink-0 text-xs text-gray-500 dark:text-gray-400">{formatDate(it.date)}</div>
+                      </div>
+                    ) : (
+                      <div className="px-4 pt-4 pb-2 flex items-center">
+                        <div className="ml-auto shrink-0 text-xs text-gray-500 dark:text-gray-400">{formatDate(it.date)}</div>
+                      </div>
+                    )}
                     {preferredImageUrl ? (
                       <div>
                         <img
@@ -864,10 +887,7 @@ export default function MixedFeedSection() {
                       </div>
                     ) : null}
                     <div className="px-4 py-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-base font-bold text-gray-900 truncate dark:text-gray-100">W杯2026：{it.countryNameJa}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
-                      </div>
+                      <div className="text-base font-bold text-gray-900 truncate dark:text-gray-100">W杯2026：{it.countryNameJa}</div>
                       {it.comment ? <div className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{it.comment}</div> : null}
 
                       {canDelete ? (
@@ -896,7 +916,7 @@ export default function MixedFeedSection() {
                         </div>
                       ) : null}
 
-                      <div className="mt-2 flex items-center gap-5 text-xs text-gray-500 dark:text-gray-400">
+                      <div className="mt-3 flex items-center justify-around text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-800">
                         <div className="inline-flex items-center gap-2" aria-label="コメント数">
                           <FaRegComment className={iconBase} />
                           <span>{it.commentCount ?? 0}</span>
@@ -920,26 +940,6 @@ export default function MixedFeedSection() {
                           <span>{it.likeCount ?? 0}</span>
                         </button>
                       </div>
-
-                      {author && it.createdByUid ? (
-                        <div className="mt-3 flex items-center text-xs text-gray-500 dark:text-gray-400">
-                          <Link
-                            href={`/user/${it.createdByUid}`}
-                            className="flex items-center gap-2 truncate no-underline text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            <div className="relative w-5 h-5 rounded-full overflow-hidden border border-gray-200 dark:border-gray-800">
-                              <Image
-                                src={author.avatarUrl || '/default-avatar.svg'}
-                                alt={author.name}
-                                fill
-                                sizes="20px"
-                                className="object-cover"
-                              />
-                            </div>
-                            <span className="truncate">{author.name}</span>
-                          </Link>
-                        </div>
-                      ) : null}
                     </div>
                   </Link>
                 );
@@ -953,6 +953,29 @@ export default function MixedFeedSection() {
                   href={it.href}
                   className="block w-full rounded-xl border border-gray-200 bg-white text-left shadow-sm hover:bg-gray-50 transition-colors overflow-hidden dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900"
                 >
+                  {author && it.createdByUid ? (
+                    <div className="px-4 pt-4 pb-2 flex items-center gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="relative w-9 h-9 rounded-full overflow-hidden border border-gray-200 dark:border-gray-800 shrink-0">
+                          <Image
+                            src={author.avatarUrl || '/default-avatar.svg'}
+                            alt={author.name}
+                            fill
+                            sizes="36px"
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold text-gray-900 truncate dark:text-gray-100">{author.name}</div>
+                        </div>
+                      </div>
+                      <div className="ml-auto shrink-0 text-xs text-gray-500 dark:text-gray-400">{formatDate(it.date)}</div>
+                    </div>
+                  ) : (
+                    <div className="px-4 pt-4 pb-2 flex items-center">
+                      <div className="ml-auto shrink-0 text-xs text-gray-500 dark:text-gray-400">{formatDate(it.date)}</div>
+                    </div>
+                  )}
                   {it.imageUrl ? (
                     <div>
                       <img
@@ -964,10 +987,7 @@ export default function MixedFeedSection() {
                     </div>
                   ) : null}
                   <div className="px-4 py-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-base font-bold text-gray-900 truncate dark:text-gray-100">{it.title}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
-                    </div>
+                    <div className="text-base font-bold text-gray-900 truncate dark:text-gray-100">{it.title}</div>
                     <div className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">25/26シーズンの最終順位予想</div>
 
                     {canDelete ? (
@@ -996,25 +1016,12 @@ export default function MixedFeedSection() {
                       </div>
                     ) : null}
 
-                    {author && it.createdByUid ? (
-                      <div className="mt-3 flex items-center text-xs text-gray-500 dark:text-gray-400">
-                        <Link
-                          href={`/user/${it.createdByUid}`}
-                          className="flex items-center gap-2 truncate no-underline text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        >
-                          <div className="relative w-5 h-5 rounded-full overflow-hidden border border-gray-200 dark:border-gray-800">
-                            <Image
-                              src={author.avatarUrl || '/default-avatar.svg'}
-                              alt={author.name}
-                              fill
-                              sizes="20px"
-                              className="object-cover"
-                            />
-                          </div>
-                          <span className="truncate">{author.name}</span>
-                        </Link>
+                    <div className="mt-3 flex items-center justify-around text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-800">
+                      <div className="inline-flex items-center gap-2" aria-label="詳細を見る">
+                        <FaRegComment className="w-4 h-4 opacity-0" />
+                        <span>詳細</span>
                       </div>
-                    ) : null}
+                    </div>
                   </div>
                 </Link>
               );

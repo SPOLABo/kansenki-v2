@@ -84,6 +84,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, priority = false, footer = nu
 
   const imageAspectClassName = variant === 'timeline' ? 'aspect-[16/9]' : 'aspect-[4/3]';
   const contentPaddingClassName = variant === 'timeline' ? 'p-4' : 'p-2';
+  const showTopAuthorHeader = variant === 'timeline';
   const titleClassName =
     variant === 'timeline'
       ? 'text-base font-bold text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug mb-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors'
@@ -93,6 +94,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, priority = false, footer = nu
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col h-full relative">
+      {showTopAuthorHeader ? (
+        <div className="px-4 pt-4 pb-2 flex items-center gap-3">
+          <Link
+            href={`/user/${post.authorId}`}
+            className="flex items-center gap-2 min-w-0 no-underline text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            <div className="relative w-9 h-9 rounded-full overflow-hidden shrink-0">
+              <Image src={authorImage} alt={post.authorName || 'avatar'} fill sizes="36px" className="object-cover" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-bold truncate">{post.authorName || '名無し'}</div>
+            </div>
+          </Link>
+          <div className="ml-auto shrink-0 text-xs text-gray-500 dark:text-gray-400">{postDate}</div>
+        </div>
+      ) : null}
       <Link href={href} className="no-underline">
         <div className={`w-full ${imageAspectClassName} relative`}>
           {post.imageUrls && post.imageUrls.length > 0 ? (
@@ -125,23 +142,25 @@ const PostCard: React.FC<PostCardProps> = ({ post, priority = false, footer = nu
             {displaySubtext}
           </p>
         </Link>
-        <div className={metaClassName}>
-          <Link href={`/user/${post.authorId}`} className="flex items-center gap-2 truncate no-underline text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors z-10">
-            <div className="relative w-5 h-5 rounded-full overflow-hidden">
-              <Image
-                src={post.authorImage || '/default-avatar.svg'}
-                alt={post.authorName || 'avatar'}
-                fill
-                sizes="20px"
-                className="object-cover"
-              />
+        {!showTopAuthorHeader ? (
+          <div className={metaClassName}>
+            <Link href={`/user/${post.authorId}`} className="flex items-center gap-2 truncate no-underline text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors z-10">
+              <div className="relative w-5 h-5 rounded-full overflow-hidden">
+                <Image
+                  src={post.authorImage || '/default-avatar.svg'}
+                  alt={post.authorName || 'avatar'}
+                  fill
+                  sizes="20px"
+                  className="object-cover"
+                />
+              </div>
+              <span className="truncate">{post.authorName || '名無し'}</span>
+            </Link>
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              <span>{postDate}</span>
             </div>
-            <span className="truncate">{post.authorName || '名無し'}</span>
-          </Link>
-          <div className="flex items-center gap-2 ml-auto shrink-0">
-            <span>{postDate}</span>
           </div>
-        </div>
+        ) : null}
 
         {footer ? <div className="pt-2">{footer}</div> : null}
 
