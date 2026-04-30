@@ -140,11 +140,11 @@ function buildOgpLikePitchSvg(args: {
     const emptyFontSize = label.length >= 8 ? 14 : 16;
 
     const nameText = p
-      ? `<text x="${nameX}" y="${y + 1}" text-anchor="start" dominant-baseline="middle" fill="rgba(255,255,255,0.92)" font-size="${nameFontSize}" font-weight="800">${escapeXml(label)}</text>`
-      : `<text x="${x}" y="${y + 1}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.62)" font-size="${emptyFontSize}" font-weight="800">${escapeXml(label)}</text>`;
+      ? `<text x="${nameX}" y="${y + 1}" text-anchor="start" dominant-baseline="middle" fill="rgba(255,255,255,0.92)" font-size="${nameFontSize}" font-weight="800" font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic','Meiryo',sans-serif">${escapeXml(label)}</text>`
+      : `<text x="${x}" y="${y + 1}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.62)" font-size="${emptyFontSize}" font-weight="800" font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic','Meiryo',sans-serif">${escapeXml(label)}</text>`;
 
     const markText = mark
-      ? `<text x="${x - pillW / 2 + 22}" y="${y + 1}" text-anchor="start" dominant-baseline="middle" fill="${markColor}" font-size="20" font-weight="900">${escapeXml(mark)}</text>`
+      ? `<text x="${x - pillW / 2 + 22}" y="${y + 1}" text-anchor="start" dominant-baseline="middle" fill="${markColor}" font-size="20" font-weight="900" font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic','Meiryo',sans-serif">${escapeXml(mark)}</text>`
       : '';
 
     return `<g>
@@ -155,7 +155,7 @@ function buildOgpLikePitchSvg(args: {
   }).join('\n');
 
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic','Meiryo',sans-serif">
       <defs>
         <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#0b1533" stop-opacity="0.92" />
@@ -219,7 +219,7 @@ function buildPlFinalTableSvg(args: { selectedByRank: (string | null)[]; crestBy
     .join('\n');
 
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic','Meiryo',sans-serif">
       <defs>
         <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="#f0f9ff" stop-opacity="1" />
