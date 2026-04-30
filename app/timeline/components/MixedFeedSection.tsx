@@ -200,20 +200,19 @@ function buildPlFinalTableSvg(args: { selectedByRank: (string | null)[]; crestBy
       const club = typeof clubId === 'string' ? (premierLeagueClubs as any)[clubId] : null;
       const name = club?.nameJa ? String(club.nameJa) : '未選択';
       const logoUrl = typeof clubId === 'string' ? crestByClubId[clubId] : '';
-      const y = 170 + idx * 64;
-      const crestSize = 40;
-      const crestX = 200;
+      const y = 156 + idx * 72;
+      const crestSize = 46;
+      const crestX = 220;
       const crestY = Math.round(y - crestSize / 2);
-      const nameX = 260;
+      const nameX = 280;
       return `
         <g>
-          <rect x="120" y="${y - 34}" width="960" height="56" rx="18" fill="rgba(255,255,255,0.86)" stroke="rgba(2, 6, 23, 0.10)" />
-          <text x="160" y="${y}" fill="rgba(2, 6, 23, 0.65)" font-size="22" font-weight="900">${idx + 1}</text>
+          <rect x="64" y="${y - 38}" width="1072" height="64" rx="16" fill="rgba(255,255,255,0.78)" />
+          <text x="120" y="${y}" fill="rgba(2, 6, 23, 0.70)" font-size="28" font-weight="900">${idx + 1}</text>
           ${logoUrl ? `<g>
-            <rect x="${crestX}" y="${crestY}" width="${crestSize}" height="${crestSize}" rx="20" fill="rgba(255,255,255,0.95)" stroke="rgba(2, 6, 23, 0.10)" />
-            <image href="${escapeXml(logoUrl)}" x="${crestX + 6}" y="${crestY + 6}" width="${crestSize - 12}" height="${crestSize - 12}" preserveAspectRatio="xMidYMid meet" />
+            <image href="${escapeXml(logoUrl)}" x="${crestX}" y="${crestY}" width="${crestSize}" height="${crestSize}" preserveAspectRatio="xMidYMid meet" />
           </g>` : ''}
-          <text x="${nameX}" y="${y}" fill="rgba(2, 6, 23, 0.92)" font-size="26" font-weight="900">${escapeXml(name)}</text>
+          <text x="${nameX}" y="${y}" fill="rgba(2, 6, 23, 0.92)" font-size="34" font-weight="900">${escapeXml(name)}</text>
         </g>
       `;
     })
@@ -238,8 +237,8 @@ function buildPlFinalTableSvg(args: { selectedByRank: (string | null)[]; crestBy
 
       <g>
         <rect x="0" y="0" width="10" height="88" fill="url(#accent)" />
-        <text x="28" y="52" fill="rgba(2, 6, 23, 0.92)" font-size="22" font-weight="900">Premier League 最終順位予想</text>
-        <text x="${W - 28}" y="52" fill="rgba(2, 6, 23, 0.55)" font-size="18" font-weight="800" text-anchor="end">TOP 7</text>
+        <text x="28" y="54" fill="rgba(2, 6, 23, 0.92)" font-size="26" font-weight="900">Premier League 最終順位予想</text>
+        <text x="${W - 28}" y="54" fill="rgba(2, 6, 23, 0.55)" font-size="20" font-weight="800" text-anchor="end">TOP 7</text>
       </g>
 
       ${items}
@@ -769,8 +768,8 @@ export default function MixedFeedSection() {
   }, [wc2026CaptureTargets, wc2026ThumbByShareId]);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 overflow-hidden mb-4">
-      <div className="p-4">
+    <div className="rounded-none sm:rounded-2xl border border-white/10 bg-white/10 overflow-hidden mb-4">
+      <div className="px-0 sm:px-4 py-0 sm:py-4">
         {wc2026CaptureTargets.map((t) => {
           if (!t.pitchData) return null;
           return (
@@ -797,6 +796,7 @@ export default function MixedFeedSection() {
                   <div key={`post-${it.id}`} className="rounded-2xl overflow-hidden">
                     <PostCard
                       post={it.post}
+                      variant="timeline"
                       footer={
                         <div>
                           {canDelete ? (
@@ -845,11 +845,11 @@ export default function MixedFeedSection() {
                     className="block w-full rounded-xl border border-gray-200 bg-white text-left shadow-sm hover:bg-gray-50 transition-colors overflow-hidden dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900"
                   >
                     {preferredImageUrl ? (
-                      <div className="px-4 pt-3">
+                      <div>
                         <img
                           src={preferredImageUrl}
                           alt="スタメン予想"
-                          className="w-full rounded-lg border border-gray-200 dark:border-gray-800"
+                          className="w-full aspect-[1200/630] object-cover"
                           loading="lazy"
                           onError={(e) => {
                             try {
@@ -863,12 +863,12 @@ export default function MixedFeedSection() {
                         />
                       </div>
                     ) : null}
-                    <div className="px-4 py-3">
+                    <div className="px-4 py-4">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-sm font-bold text-gray-900 truncate dark:text-gray-100">W杯2026：{it.countryNameJa}</div>
-                        <div className="text-[11px] text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
+                        <div className="text-base font-bold text-gray-900 truncate dark:text-gray-100">W杯2026：{it.countryNameJa}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
                       </div>
-                      {it.comment ? <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{it.comment}</div> : null}
+                      {it.comment ? <div className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{it.comment}</div> : null}
 
                       {canDelete ? (
                         <div className="mt-2 flex justify-end">
@@ -954,21 +954,21 @@ export default function MixedFeedSection() {
                   className="block w-full rounded-xl border border-gray-200 bg-white text-left shadow-sm hover:bg-gray-50 transition-colors overflow-hidden dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900"
                 >
                   {it.imageUrl ? (
-                    <div className="px-4 pt-3">
+                    <div>
                       <img
                         src={it.imageUrl}
                         alt={it.title}
-                        className="w-full rounded-lg border border-gray-200 dark:border-gray-800"
+                        className="w-full aspect-[1200/630] object-cover"
                         loading="lazy"
                       />
                     </div>
                   ) : null}
-                  <div className="px-4 py-3">
+                  <div className="px-4 py-4">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-sm font-bold text-gray-900 truncate dark:text-gray-100">{it.title}</div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
+                      <div className="text-base font-bold text-gray-900 truncate dark:text-gray-100">{it.title}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">更新：{formatDate(it.date)}</div>
                     </div>
-                    <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">25/26シーズンの最終順位予想</div>
+                    <div className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">25/26シーズンの最終順位予想</div>
 
                     {canDelete ? (
                       <div className="mt-2 flex justify-end">

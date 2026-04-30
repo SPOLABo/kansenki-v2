@@ -8,9 +8,10 @@ interface PostCardProps {
   post: UnifiedPost;
   priority?: boolean;
   footer?: React.ReactNode;
+  variant?: 'default' | 'timeline';
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, priority = false, footer = null }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, priority = false, footer = null, variant = 'default' }) => {
   if (post.imageUrls && post.imageUrls.length > 0) {
     console.log('PostCard Image URL:', post.imageUrls[0]);
   }
@@ -81,10 +82,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, priority = false, footer = nu
 
   const categoryLabel = getCategoryLabel(post);
 
+  const imageAspectClassName = variant === 'timeline' ? 'aspect-[16/9]' : 'aspect-[4/3]';
+  const contentPaddingClassName = variant === 'timeline' ? 'p-4' : 'p-2';
+  const titleClassName =
+    variant === 'timeline'
+      ? 'text-base font-bold text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug mb-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors'
+      : 'text-sm font-bold text-gray-800 dark:text-gray-200 line-clamp-2 leading-tight h-10 mb-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors';
+  const subtextClassName = variant === 'timeline' ? 'text-sm text-gray-500 dark:text-gray-400 line-clamp-1' : 'text-xs text-gray-500 dark:text-gray-400 line-clamp-1 h-4';
+  const metaClassName = variant === 'timeline' ? 'mt-auto flex items-center text-sm text-gray-500 dark:text-gray-400 pt-3' : 'mt-auto flex items-center text-xs text-gray-500 dark:text-gray-400 pt-2';
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col h-full relative">
       <Link href={href} className="no-underline">
-        <div className="w-full aspect-[4/3] relative">
+        <div className={`w-full ${imageAspectClassName} relative`}>
           {post.imageUrls && post.imageUrls.length > 0 ? (
             <Image
               src={post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls[0] : '/default-avatar.svg'}
@@ -106,16 +116,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, priority = false, footer = nu
           )}
         </div>
       </Link>
-      <div className="p-2 flex flex-col flex-grow">
+      <div className={`${contentPaddingClassName} flex flex-col flex-grow`}>
         <Link href={href} className="no-underline">
-          <p className="text-sm font-bold text-gray-800 dark:text-gray-200 line-clamp-2 leading-tight h-10 mb-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+          <p className={titleClassName}>
             {displayTitle}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 h-4">
+          <p className={subtextClassName}>
             {displaySubtext}
           </p>
         </Link>
-        <div className="mt-auto flex items-center text-xs text-gray-500 dark:text-gray-400 pt-2">
+        <div className={metaClassName}>
           <Link href={`/user/${post.authorId}`} className="flex items-center gap-2 truncate no-underline text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors z-10">
             <div className="relative w-5 h-5 rounded-full overflow-hidden">
               <Image
