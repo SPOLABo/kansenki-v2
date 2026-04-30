@@ -202,13 +202,13 @@ function buildPlFinalTableSvg(args: { selectedByRank: (string | null)[]; crestBy
       const logoUrl = typeof clubId === 'string' ? crestByClubId[clubId] : '';
       const y = 156 + idx * 72;
       const crestSize = 46;
-      const crestX = 220;
+      const crestX = 180;
       const crestY = Math.round(y - crestSize / 2);
-      const nameX = 280;
+      const nameX = 240;
       return `
         <g>
-          <rect x="64" y="${y - 38}" width="1072" height="64" rx="16" fill="rgba(255,255,255,0.78)" />
-          <text x="120" y="${y}" fill="rgba(2, 6, 23, 0.70)" font-size="28" font-weight="900">${idx + 1}</text>
+          <rect x="32" y="${y - 38}" width="1136" height="64" rx="16" fill="rgba(255,255,255,0.78)" />
+          <text x="84" y="${y}" fill="rgba(2, 6, 23, 0.70)" font-size="28" font-weight="900">${idx + 1}</text>
           ${logoUrl ? `<g>
             <image href="${escapeXml(logoUrl)}" x="${crestX}" y="${crestY}" width="${crestSize}" height="${crestSize}" preserveAspectRatio="xMidYMid meet" />
           </g>` : ''}
