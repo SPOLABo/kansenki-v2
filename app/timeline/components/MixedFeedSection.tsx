@@ -352,15 +352,21 @@ export default function MixedFeedSection() {
     if (!items.some((x) => x.kind === 'plFinalTable')) return;
     if (Object.keys(plCrestByClubId).length === 0) return;
 
-    setItems((prev) =>
-      prev.map((it) => {
+    setItems((prev) => {
+      let changed = false;
+      const next = prev.map((it) => {
         if (it.kind !== 'plFinalTable') return it;
         if (typeof it.imageUrl === 'string' && it.imageUrl.startsWith('data:image/svg+xml')) {
-          return { ...it, imageUrl: buildPlFinalTableSvg({ selectedByRank: it.selectedByRank, crestByClubId: plCrestByClubId }) };
+          const nextUrl = buildPlFinalTableSvg({ selectedByRank: it.selectedByRank, crestByClubId: plCrestByClubId });
+          if (nextUrl === it.imageUrl) return it;
+          changed = true;
+          return { ...it, imageUrl: nextUrl };
         }
         return it;
-      })
-    );
+      });
+
+      return changed ? next : prev;
+    });
   }, [items, plCrestByClubId]);
 
   useEffect(() => {
