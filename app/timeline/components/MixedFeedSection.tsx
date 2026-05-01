@@ -205,9 +205,18 @@ function buildPlFinalTableSvg(args: { selectedByRank: (string | null)[]; crestBy
       const crestX = 180;
       const crestY = Math.round(y - crestSize / 2);
       const nameX = 240;
+
+      const band = idx <= 4 ? '#3b82f6' : idx === 5 ? '#f97316' : '#10b981';
+      const bandLabel = idx <= 4 ? 'CL' : idx === 5 ? 'EL' : 'ECL';
+      const bandX = 32;
+      const bandY = y - 38;
+      const bandW = 10;
+      const bandH = 64;
+
       return `
         <g>
           <rect x="32" y="${y - 38}" width="1136" height="64" rx="16" fill="rgba(255,255,255,0.78)" />
+          <rect x="${bandX}" y="${bandY}" width="${bandW}" height="${bandH}" rx="5" fill="${band}" />
           <text x="84" y="${y}" fill="rgba(2, 6, 23, 0.70)" font-size="28" font-weight="900">${idx + 1}</text>
           ${logoUrl ? `<g>
             <image href="${escapeXml(logoUrl)}" x="${crestX}" y="${crestY}" width="${crestSize}" height="${crestSize}" preserveAspectRatio="xMidYMid meet" />

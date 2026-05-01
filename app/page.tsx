@@ -210,6 +210,14 @@
        <PopularPostsSlider />
 
        <div className="px-2 py-3">
+         <div className="px-2 mt-2 mb-4">
+           <Link
+             href="/form"
+             className="block w-full rounded-xl bg-orange-500 px-4 py-3 text-center text-sm font-bold text-white shadow-sm transition-colors hover:bg-orange-600"
+           >
+             観戦記を投稿する
+           </Link>
+         </div>
          <h2 className="text-lg font-bold my-3 text-center text-gray-900 dark:text-white">最新の投稿</h2>
          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-3">
            {items.map((item, index) => {
